@@ -102,7 +102,7 @@ A comprehensive web application that combines cutting-edge machine learning, rea
 
 1. **Clone the Repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Athexdev/CODE_HELICS.git
    cd HACKATHON
    ```
 
