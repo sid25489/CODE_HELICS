@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}DNA Sequence Analyzer - Home{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">
+                    <i class="fas fa-dna me-3"></i>
+                    DNA Sequence Analyzer
+                </h1>
+                <p class="lead mb-4">
+                    Advanced machine learning-powered DNA sequence analysis using k-mer based RandomForest classification. 
+                    Get probabilistic identity matches from your DNA sequences with high accuracy.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="/analyze" class="btn btn-light btn-lg">
+                        <i class="fas fa-microscope me-2"></i>
+                        Start Analysis
+                    </a>
+                    <a href="/results" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        View Results
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="dna-animation floating">
+                    <div class="dna-icon-container">
+                        <i class="fas fa-dna fa-10x opacity-75 dna-helix pulse-glow"></i>
+                        <div class="dna-orbit-particles">
+                            <div class="orbit-particle orbit-1"></div>
+                            <div class="orbit-particle orbit-2"></div>
+                            <div class="orbit-particle orbit-3"></div>
+                            <div class="orbit-particle orbit-4"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h2 class="mb-4">How It Works</h2>
+            <p class="lead text-muted">Our advanced system uses machine learning to analyze DNA sequences</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card feature-card glass-card h-100 text-center p-4 fade-in" style="animation-delay: 0.1s">
+                <div class="card-body">
+                    <div class="mb-3 floating" style="animation-delay: 0.5s">
+                        <i class="fas fa-upload fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">1. Upload DNA Sequence</h5>
+                    <p class="card-text">
+                        Input your DNA sequence in standard format (A, T, C, G nucleotides). 
+                        Our system accepts sequences of various lengths for analysis.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card feature-card glass-card h-100 text-center p-4 fade-in" style="animation-delay: 0.2s">
+                <div class="card-body">
+                    <div class="mb-3 floating" style="animation-delay: 1s">
+                        <i class="fas fa-cogs fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">2. K-mer Analysis</h5>
+                    <p class="card-text">
+                        The sequence is processed using k-mer decomposition and analyzed 
+                        by our trained RandomForest classifier for pattern recognition.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card feature-card glass-card h-100 text-center p-4 fade-in" style="animation-delay: 0.3s">
+                <div class="card-body">
+                    <div class="mb-3 floating" style="animation-delay: 1.5s">
+                        <i class="fas fa-chart-pie fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="card-title">3. Get Results</h5>
+                    <p class="card-text">
+                        Receive probabilistic identity matches with confidence scores, 
+                        helping you identify potential genetic relationships.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-lg-8 mx-auto">
+            <div class="card glass-card slide-in-left">
+                <div class="card-header gradient-bg">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        System Features
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2 fade-in" style="animation-delay: 0.1s">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    K-mer based feature extraction
+                                </li>
+                                <li class="mb-2 fade-in" style="animation-delay: 0.2s">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    RandomForest classification
+                                </li>
+                                <li class="mb-2 fade-in" style="animation-delay: 0.3s">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Probabilistic matching
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2 fade-in" style="animation-delay: 0.4s">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Supabase data storage
+                                </li>
+                                <li class="mb-2 fade-in" style="animation-delay: 0.5s">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Real-time analysis
+                                </li>
+                                <li class="mb-2 fade-in" style="animation-delay: 0.6s">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    Dark/Light theme support
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 text-center">
+            <div class="card glass-card pulse-glow">
+                <div class="card-body">
+                    <h5 class="card-title">Ready to analyze your DNA sequence?</h5>
+                    <p class="card-text">Get started with our advanced machine learning analysis system.</p>
+                    <a href="/analyze" class="btn btn-primary btn-lg bounce-in">
+                        <i class="fas fa-play me-2"></i>
+                        Start Analysis Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Enhanced DNA icon animations
+    document.addEventListener('DOMContentLoaded', function() {
+        const dnaIcon = document.querySelector('.dna-animation i');
+        const featureCards = document.querySelectorAll('.feature-card');
+        
+        if (dnaIcon) {
+            // Continuous rotation with varying speed
+            let rotationAngle = 0;
+            setInterval(() => {
+                rotationAngle += 2;
+                dnaIcon.style.transform = `rotate(${rotationAngle}deg) scale(${1 + Math.sin(rotationAngle * 0.01) * 0.1})`;
+            }, 50);
+            
+            dnaIcon.style.transition = 'all 0.1s ease-out';
+        }
+        
+        // Staggered card animations on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0) scale(1)';
+                    }, index * 200);
+                }
+            });
+        }, observerOptions);
+        
+        featureCards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px) scale(0.95)';
+            card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            cardObserver.observe(card);
+        });
+        
+        // Interactive hover effects for cards
+        featureCards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px) scale(1.02)';
+                this.style.boxShadow = '0 20px 40px rgba(0,0,0,0.2)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.boxShadow = '';
+            });
+        });
+        
+        // Animated typing effect for the main heading
+        const heading = document.querySelector('.display-4');
+        if (heading) {
+            const text = heading.textContent;
+            heading.textContent = '';
+            heading.style.borderRight = '2px solid #fff';
+            
+            let i = 0;
+            const typeWriter = () => {
+                if (i < text.length) {
+                    heading.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(typeWriter, 100);
+                } else {
+                    setTimeout(() => {
+                        heading.style.borderRight = 'none';
+                    }, 1000);
+                }
+            };
+            
+            setTimeout(typeWriter, 500);
+        }
+        
+        // Parallax effect for hero section
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const heroSection = document.querySelector('.hero-section');
+            if (heroSection) {
+                heroSection.style.transform = `translateY(${scrolled * 0.5}px)`;
+            }
+        });
+    });
+</script>
+{% endblock %}

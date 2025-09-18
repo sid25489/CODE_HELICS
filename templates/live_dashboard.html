@@ -1,0 +1,866 @@
+{% extends "base.html" %}
+
+{% block title %}Live Analysis Dashboard - DNAAadeshak{% endblock %}
+
+{% block content %}
+<style>
+        /* Live Dashboard Specific Styles */
+        .progress-ring {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .progress-ring-circle {
+            stroke: var(--bs-success);
+            stroke-width: 8;
+            fill: transparent;
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
+        .result-card {
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideIn 0.5s ease-out forwards;
+        }
+        
+        @keyframes slideIn {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .confidence-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+        
+        .confidence-very-high { background: var(--bs-success); color: white; }
+        .confidence-high { background: var(--bs-info); color: white; }
+        .confidence-medium { background: var(--bs-warning); color: white; }
+        .confidence-low { background: var(--bs-danger); color: white; }
+        
+        .live-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: var(--bs-danger);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .analysis-log {
+            background: var(--bs-dark);
+            border-radius: 10px;
+            padding: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--bs-light);
+        }
+        
+        .log-entry {
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+
+<div class="container mt-4">
+        <!-- Analysis Controls -->
+        <div class="card glass-card fade-in live-card">
+            <div class="card-header gradient-bg">
+                <h4 class="mb-0">
+                    <i class="fas fa-chart-line me-2 floating"></i>
+                    <span class="live-indicator"></span>Live Analysis Dashboard
+                </h4>
+            </div>
+
+        <!-- Reset Totals Toggle -->
+        <div class="d-flex justify-content-end align-items-center mb-3">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="toggleResetTotals">
+                <label class="form-check-label" for="toggleResetTotals">
+                    Reset Total Analyses
+                </label>
+            </div>
+        </div>
+            <div class="card-body">
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>DNA Sequence</strong></label>
+                        <textarea id="sequenceInput" class="form-control dna-sequence" rows="4" 
+                                placeholder="Enter DNA sequence (ATCG) or upload a file..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Upload File</strong></label>
+                        <input type="file" id="fileInput" class="form-control" accept=".txt,.fasta,.fa,.seq,.dna">
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Supported formats: .txt, .fasta, .fa, .seq, .dna (max 10MB)
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <button id="startAnalysis" class="btn btn-success btn-lg">
+                            <i class="fas fa-play me-2"></i>Start Live Analysis
+                        </button>
+                        <button id="stopAnalysis" class="btn btn-danger btn-lg" disabled>
+                            <i class="fas fa-stop me-2"></i>Stop Analysis
+                        </button>
+                        <button id="resetDashboardBtn" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-rotate-right me-2"></i>Reset
+                        </button>
+                        <button id="downloadPdfBtn" class="btn btn-primary btn-lg" disabled>
+                            <i class="fas fa-file-download me-2"></i>Download PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="progress-ring">
+                        <svg width="120" height="120">
+                            <circle class="progress-ring-circle" cx="60" cy="60" r="45"></circle>
+                        </svg>
+                        <div class="position-absolute top-50 start-50 translate-middle">
+                            <div id="progressPercent" class="fw-bold fs-4">0%</div>
+                            <div id="progressStatus" class="small opacity-75">Ready</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Live Statistics -->
+        <div class="stats-grid">
+            <div class="card glass-card text-center">
+                <div class="card-body">
+                    <div id="totalAnalyses" class="stat-number text-primary">0</div>
+                    <div class="stat-label">Total Analyses</div>
+                </div>
+            </div>
+            <div class="card glass-card text-center">
+                <div class="card-body">
+                    <div id="avgConfidence" class="stat-number text-success">0%</div>
+                    <div class="stat-label">Avg Confidence</div>
+                </div>
+            </div>
+            <div class="card glass-card text-center">
+                <div class="card-body">
+                    <div id="identityMatches" class="stat-number text-info">0</div>
+                    <div class="stat-label">Identity Matches</div>
+                </div>
+            </div>
+            <div class="card glass-card text-center">
+                <div class="card-body">
+                    <div id="processingTime" class="stat-number text-warning">0s</div>
+                    <div class="stat-label">Processing Time</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Live Results -->
+            <div class="col-md-8">
+                <div class="card glass-card fade-in">
+                    <div class="card-header gradient-bg">
+                        <h4 class="mb-0">
+                            <i class="fas fa-flask me-2 floating"></i>Live Analysis Results
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="liveResults">
+                            <div class="text-center py-4">
+                                <i class="fas fa-chart-bar fa-3x mb-3 text-muted"></i>
+                                <p class="text-muted">Start an analysis to see live results</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Log -->
+            <div class="col-md-4">
+                <div class="card glass-card fade-in">
+                    <div class="card-header gradient-bg">
+                        <h4 class="mb-0">
+                            <i class="fas fa-terminal me-2 floating"></i>Analysis Log
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="analysisLog" class="analysis-log">
+                            <div class="log-entry text-success">
+                                [SYSTEM] Dashboard initialized
+                            </div>
+                            <div class="log-entry text-info">
+                                [INFO] Ready for analysis
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Identity Matches Section -->
+        <div class="card glass-card fade-in">
+            <div class="card-header gradient-bg">
+                <h4 class="mb-0">
+                    <i class="fas fa-users me-2 floating"></i>Identity Matches
+                </h4>
+            </div>
+            <div class="card-body">
+                <div id="identityResults">
+                    <div class="text-center py-4">
+                        <i class="fas fa-user-friends fa-3x mb-3 text-muted"></i>
+                        <p class="text-muted">Identity matches will appear here during analysis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        class LiveDashboard {
+            constructor() {
+                this.isAnalyzing = false;
+                this.currentStream = null;
+                this.stats = {
+                    totalAnalyses: 0,
+                    avgConfidence: 0,
+                    identityMatches: 0,
+                    processingTime: 0
+                };
+                this.lastResultData = null; // store latest successful analysis payload
+                // Load persisted total analyses if available
+                try {
+                    const persisted = localStorage.getItem('daa_total_analyses');
+                    if (persisted) {
+                        const n = parseInt(persisted, 10);
+                        if (!Number.isNaN(n)) {
+                            this.stats.totalAnalyses = n;
+                        }
+                    }
+                } catch(_) {}
+                this.initializeEventListeners();
+                this.initializeCrossTabCommunication();
+                // Reflect any persisted value immediately
+                this.updateStats();
+                // Check for prefilled sequence from analyze page
+                this.checkPrefillSequence();
+                // Check for any pending analysis updates
+                this.checkForAnalysisUpdates();
+            }
+
+            resetTotalsToggle(event) {
+                const el = event.target;
+                if (!el.checked) return; // only act on turning ON
+                const confirmed = confirm('Reset Total Analyses counter to 0?');
+                if (confirmed) {
+                    try { localStorage.removeItem('daa_total_analyses'); } catch(_) {}
+                    this.stats.totalAnalyses = 0;
+                    this.updateStats();
+                    this.addLogEntry('[RESET] Total Analyses counter cleared via toggle', 'warning');
+                }
+                // Always turn it back off after action
+                el.checked = false;
+            }
+
+            initializeEventListeners() {
+                document.getElementById('startAnalysis').addEventListener('click', () => this.startAnalysis());
+                document.getElementById('stopAnalysis').addEventListener('click', () => this.stopAnalysis());
+                document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
+                const dlBtn = document.getElementById('downloadPdfBtn');
+                if (dlBtn) {
+                    dlBtn.addEventListener('click', () => this.downloadPdf());
+                }
+                const resetBtn = document.getElementById('resetDashboardBtn');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', (e) => this.resetDashboard(e));
+                    resetBtn.title = 'Click to reset session. Shift+Click to also reset Total Analyses counter.';
+                }
+                const toggleReset = document.getElementById('toggleResetTotals');
+                if (toggleReset) {
+                    toggleReset.addEventListener('change', (e) => this.resetTotalsToggle(e));
+                }
+                
+                // Listen for messages from analyze page
+                window.addEventListener('message', (event) => {
+                    if (event.origin !== window.location.origin) return;
+                    if (event.data.type === 'prefill_sequence') {
+                        this.prefillSequence(event.data.sequence);
+                    } else if (event.data.type === 'analysis_update') {
+                        this.handleAnalysisUpdate(event.data.data);
+                    }
+                });
+            }
+            
+            initializeCrossTabCommunication() {
+                // Initialize BroadcastChannel for cross-tab communication
+                try {
+                    if (typeof BroadcastChannel !== 'undefined') {
+                        this.broadcastChannel = new BroadcastChannel('dna_analysis_updates');
+                        this.broadcastChannel.addEventListener('message', (event) => {
+                            if (event.data.type === 'new_analysis') {
+                                this.handleAnalysisUpdate(event.data.data);
+                            }
+                        });
+                        
+                        // Request any existing data from analyze page
+                        this.broadcastChannel.postMessage({
+                            type: 'dashboard_request_data'
+                        });
+                    }
+                } catch (e) {
+                    console.log('BroadcastChannel not supported, using localStorage polling');
+                    // Fallback to localStorage polling
+                    this.startLocalStoragePolling();
+                }
+                
+                // Notify analyze page that dashboard is ready
+                try {
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'dashboard_ready'
+                        }, window.location.origin);
+                    }
+                } catch (e) {
+                    // Ignore cross-origin errors
+                }
+            }
+            
+            startLocalStoragePolling() {
+                // Poll localStorage for updates every 2 seconds
+                this.localStorageInterval = setInterval(() => {
+                    this.checkForAnalysisUpdates();
+                }, 2000);
+            }
+            
+            checkForAnalysisUpdates() {
+                try {
+                    const latestAnalysis = localStorage.getItem('daa_latest_analysis');
+                    if (latestAnalysis) {
+                        const analysisData = JSON.parse(latestAnalysis);
+                        const lastProcessedTimestamp = localStorage.getItem('daa_last_processed_timestamp');
+                        
+                        // Only process if this is a new analysis
+                        if (!lastProcessedTimestamp || analysisData.timestamp > parseInt(lastProcessedTimestamp)) {
+                            this.handleAnalysisUpdate(analysisData);
+                            localStorage.setItem('daa_last_processed_timestamp', analysisData.timestamp.toString());
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error checking for analysis updates:', e);
+                }
+            }
+            
+            handleAnalysisUpdate(analysisData) {
+                try {
+                    this.addLogEntry(`[EXTERNAL] Analysis received from Analyze page (${analysisData.sequence_length} bases)`, 'info');
+                    
+                    // Update last result data
+                    this.lastResultData = {
+                        success: true,
+                        sequence_length: analysisData.sequence_length,
+                        source: analysisData.source,
+                        results: analysisData.results,
+                        identity_matches: analysisData.identity_matches
+                    };
+                    
+                    // Display the results
+                    this.displayResults(analysisData.results);
+                    
+                    // Display identity matches if available
+                    if (analysisData.identity_matches) {
+                        this.displayIdentityMatches(analysisData.identity_matches);
+                        this.stats.identityMatches = analysisData.identity_matches.length;
+                    }
+                    
+                    // Update statistics
+                    this.stats.totalAnalyses += 1;
+                    try { localStorage.setItem('daa_total_analyses', String(this.stats.totalAnalyses)); } catch(_) {}
+                    
+                    // Calculate average confidence from results
+                    if (analysisData.results && analysisData.results.length > 0) {
+                        let totalConfidence = 0;
+                        analysisData.results.forEach(result => {
+                            const confPct = (result.confidence_percent !== undefined && result.confidence_percent !== null)
+                                ? Number(result.confidence_percent)
+                                : (result.probability * 100);
+                            totalConfidence += confPct;
+                        });
+                        this.stats.avgConfidence = (totalConfidence / analysisData.results.length).toFixed(0);
+                    }
+                    
+                    this.stats.processingTime = '0.0'; // External analysis, no processing time tracked
+                    this.updateStats();
+                    
+                    // Enable PDF download
+                    document.getElementById('downloadPdfBtn').disabled = false;
+                    
+                    this.addLogEntry('[EXTERNAL] Analysis data integrated successfully', 'success');
+                    
+                } catch (error) {
+                    this.addLogEntry(`[ERROR] Failed to process external analysis: ${error.message}`, 'danger');
+                    console.error('Error handling analysis update:', error);
+                }
+            }
+
+            checkPrefillSequence() {
+                try {
+                    const prefillSeq = localStorage.getItem('daa_prefill_sequence');
+                    if (prefillSeq) {
+                        this.prefillSequence(prefillSeq);
+                        localStorage.removeItem('daa_prefill_sequence'); // Clean up
+                    }
+                } catch(_) {}
+            }
+
+            prefillSequence(sequence) {
+                if (sequence && sequence.length >= 10) {
+                    const sequenceInput = document.getElementById('sequenceInput');
+                    if (sequenceInput) {
+                        sequenceInput.value = sequence;
+                        this.addLogEntry(`[PREFILL] Sequence loaded from Analyze page (${sequence.length} bases)`, 'info');
+                        // Optional: Auto-start analysis
+                        // this.startAnalysis();
+                    }
+                }
+            }
+
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const text = await file.text();
+                    document.getElementById('sequenceInput').value = text;
+                    this.addLogEntry(`[FILE] Loaded ${file.name} (${file.size} bytes)`, 'info');
+                }
+            }
+
+            async startAnalysis() {
+                const sequence = document.getElementById('sequenceInput').value.trim();
+                if (!sequence) {
+                    alert('Please enter a DNA sequence or upload a file');
+                    return;
+                }
+
+                this.isAnalyzing = true;
+                document.getElementById('startAnalysis').disabled = true;
+                document.getElementById('stopAnalysis').disabled = false;
+                document.getElementById('downloadPdfBtn').disabled = true;
+                
+                this.addLogEntry('[START] Beginning live analysis...', 'success');
+                this.updateProgress(0, 'Initializing');
+                
+                // Clear previous results
+                document.getElementById('liveResults').innerHTML = '';
+                // Reset per-run stats
+                this.stats.avgConfidence = 0;
+                this.stats.identityMatches = 0;
+                this.stats.processingTime = 0;
+                this.updateStats();
+                
+                const startTime = Date.now();
+
+                try {
+                    // Start streaming analysis
+                    const response = await fetch(`/api/analyze-dna-stream?sequence=${encodeURIComponent(sequence)}`);
+                    this.currentStream = response.body.getReader();
+
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+
+                    while (this.isAnalyzing) {
+                        const { value, done } = await this.currentStream.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep incomplete line in buffer
+
+                        for (const line of lines) {
+                            if (line.trim()) {
+                                try {
+                                    const data = JSON.parse(line);
+                                    this.handleStreamData(data);
+                                } catch (e) {
+                                    console.error('Parse error:', e);
+                                }
+                            }
+                        }
+                    }
+
+                    // Also run identity matching
+                    await this.runIdentityMatching(sequence);
+
+                    const endTime = Date.now();
+                    this.stats.processingTime = ((endTime - startTime) / 1000).toFixed(1);
+                    this.updateStats();
+
+                } catch (error) {
+                    this.addLogEntry(`[ERROR] ${error.message}`, 'danger');
+                } finally {
+                    this.stopAnalysis();
+                }
+            }
+
+            async runIdentityMatching(sequence) {
+                try {
+                    this.addLogEntry('[IDENTITY] Running identity matching...', 'info');
+                    
+                    const response = await fetch('/api/identify-person', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sequence: sequence, top_matches: 3 })
+                    });
+
+                    const data = await response.json();
+                    if (data.success && data.matches) {
+                        this.displayIdentityMatches(data.matches);
+                        this.stats.identityMatches = data.matches.length;
+                        this.addLogEntry(`[IDENTITY] Found ${data.matches.length} matches`, 'success');
+                    }
+                } catch (error) {
+                    this.addLogEntry(`[IDENTITY] Error: ${error.message}`, 'warning');
+                }
+            }
+
+            handleStreamData(data) {
+                if (data.event === 'progress') {
+                    this.updateProgress(data.progress, data.message);
+                    this.addLogEntry(`[PROGRESS] ${data.message} (${data.progress}%)`, 'info');
+                } else if (data.event === 'result') {
+                    const payload = data.data;
+                    this.lastResultData = payload;
+                    this.displayResults(payload.results);
+                    
+                    // Identity matching
+                    if (payload.identity_matches) {
+                        this.displayIdentityMatches(payload.identity_matches);
+                        this.stats.identityMatches = payload.identity_matches.length || 0;
+                    } else {
+                        // Try to fetch identity matches using the API
+                        this.fetchIdentityMatches();
+                    }
+                    this.updateProgress(100, 'Completed');
+                    // Increment total analyses and persist
+                    this.stats.totalAnalyses += 1;
+                    try { localStorage.setItem('daa_total_analyses', String(this.stats.totalAnalyses)); } catch(_) {}
+                    this.updateStats();
+                    // Enable PDF download now that we have results
+                    document.getElementById('downloadPdfBtn').disabled = false;
+                    
+                    this.isAnalyzing = false;
+                    if (this.currentStream && this.currentStream.body) {
+                        this.currentStream.body.cancel();
+                    }
+                    this.currentStream = null;
+                } else if (data.event === 'error') {
+                    this.addLogEntry(`[ERROR] ${data.error}`, 'danger');
+                }
+            }
+
+            displayResults(data) {
+                const resultsContainer = document.getElementById('liveResults');
+                resultsContainer.innerHTML = '';
+
+                // Accept either an array of results or an object with results property
+                const resultsArray = Array.isArray(data) ? data : (data && Array.isArray(data.results) ? data.results : []);
+
+                if (resultsArray.length > 0) {
+                    let totalConfidencePct = 0;
+                    
+                    resultsArray.forEach((result, index) => {
+                        const confidence = result.confidence.toLowerCase().replace(' ', '-');
+                        const percentage = (result.probability * 100).toFixed(1);
+                        const confPct = (result.confidence_percent !== undefined && result.confidence_percent !== null)
+                            ? Number(result.confidence_percent)
+                            : Number(percentage);
+                        totalConfidencePct += confPct;
+
+                        const resultCard = document.createElement('div');
+                        resultCard.className = 'card glass-card result-card mb-3';
+                        resultCard.style.animationDelay = `${index * 0.1}s`;
+                        
+                        const confPercent = (result.confidence_percent !== undefined)
+                            ? ` (${Number(result.confidence_percent).toFixed(1)}%)` : '';
+                        resultCard.innerHTML = `
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1">${result.identity}</h5>
+                                        <p class="text-muted mb-0">Probability: ${percentage}%</p>
+                                    </div>
+                                    <span class="confidence-badge confidence-${confidence}">
+                                        ${result.confidence}${confPercent}
+                                    </span>
+                                </div>
+                                <div class="progress mt-2" style="height: 8px;">
+                                    <div class="progress-bar bg-success" style="width: ${percentage}%"></div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        resultsContainer.appendChild(resultCard);
+                    });
+
+                    this.stats.avgConfidence = (totalConfidencePct / resultsArray.length).toFixed(0);
+                }
+                this.updateStats();
+            }
+
+            displayIdentityMatches(matches) {
+                const container = document.getElementById('identityResults');
+                container.innerHTML = '';
+
+                matches.forEach((match, index) => {
+                    const confidence = match.confidence.toLowerCase().replace(' ', '-');
+                    const similarity = (match.similarity_percent !== undefined && match.similarity_percent !== null)
+                        ? Number(match.similarity_percent).toFixed(1)
+                        : (match.similarity_score * 100).toFixed(1);
+
+                    const matchCard = document.createElement('div');
+                    matchCard.className = 'card glass-card result-card mb-3';
+                    matchCard.style.animationDelay = `${index * 0.1}s`;
+                    
+                    const confPercent = (match.confidence_percent !== undefined)
+                        ? ` (${Number(match.confidence_percent).toFixed(1)}%)` : '';
+                    matchCard.innerHTML = `
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h5 class="mb-1">
+                                        <i class="fas fa-user me-2"></i>${match.person_name}
+                                    </h5>
+                                    <p class="text-muted mb-1">
+                                        DOB: ${match.metadata.dob} | Mobile: ${match.metadata.mobile}
+                                    </p>
+                                    <p class="text-muted mb-0">
+                                        Similarity: ${similarity}% | Sequences: ${match.sequence_count}
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <span class="confidence-badge confidence-${confidence}">
+                                        ${match.confidence}${confPercent}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(matchCard);
+                });
+            }
+
+            updateProgress(percent, status) {
+                const circle = document.querySelector('.progress-ring-circle');
+                const circumference = 283;
+                const offset = circumference - (percent / 100) * circumference;
+                
+                circle.style.strokeDashoffset = offset;
+                document.getElementById('progressPercent').textContent = `${percent}%`;
+                document.getElementById('progressStatus').textContent = status;
+            }
+
+            updateStats() {
+                document.getElementById('totalAnalyses').textContent = this.stats.totalAnalyses;
+                document.getElementById('avgConfidence').textContent = `${this.stats.avgConfidence}%`;
+                document.getElementById('identityMatches').textContent = this.stats.identityMatches;
+                document.getElementById('processingTime').textContent = `${this.stats.processingTime}s`;
+            }
+
+            addLogEntry(message, type = 'info') {
+                const log = document.getElementById('analysisLog');
+                const entry = document.createElement('div');
+                entry.className = `log-entry text-${type}`;
+                
+                const timestamp = new Date().toLocaleTimeString();
+                entry.textContent = `[${timestamp}] ${message}`;
+                
+                log.appendChild(entry);
+                log.scrollTop = log.scrollHeight;
+
+                // Keep only last 50 entries
+                while (log.children.length > 50) {
+                    log.removeChild(log.firstChild);
+                }
+            }
+
+            stopAnalysis() {
+                this.isAnalyzing = false;
+                if (this.currentStream) {
+                    try { this.currentStream.body.cancel(); } catch {}
+                    this.currentStream = null;
+                }
+                
+                document.getElementById('startAnalysis').disabled = false;
+                document.getElementById('stopAnalysis').disabled = true;
+                // Keep download enabled only if we have a last result
+                document.getElementById('downloadPdfBtn').disabled = !this.lastResultData;
+                
+                this.addLogEntry('[STOP] Analysis stopped', 'warning');
+            }
+
+            resetDashboard(event) {
+                // Cancel any ongoing analysis/stream
+                this.isAnalyzing = false;
+                if (this.currentStream) {
+                    try { this.currentStream.body.cancel(); } catch {}
+                    this.currentStream = null;
+                }
+
+                // Clear UI panels
+                const resultsContainer = document.getElementById('liveResults');
+                if (resultsContainer) {
+                    resultsContainer.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-bar fa-3x mb-3 text-muted"></i>
+                            <p class="text-muted">Start an analysis to see live results</p>
+                        </div>`;
+                }
+
+                const identityContainer = document.getElementById('identityResults');
+                if (identityContainer) {
+                    identityContainer.innerHTML = `
+                        <div class="text-center py-4">
+                            <i class="fas fa-user-friends fa-3x mb-3 text-muted"></i>
+                            <p class="text-muted">Identity matches will appear here during analysis</p>
+                        </div>`;
+                }
+
+                const log = document.getElementById('analysisLog');
+                if (log) {
+                    log.innerHTML = `
+                        <div class="log-entry text-success">[SYSTEM] Dashboard initialized</div>
+                        <div class="log-entry text-info">[INFO] Ready for analysis</div>
+                        <div class="log-entry text-info">[INFO] Listening for external analysis updates</div>`;
+                }
+
+                // Reset progress ring
+                this.updateProgress(0, 'Ready');
+
+                // Reset state and controls
+                this.lastResultData = null;
+                document.getElementById('startAnalysis').disabled = false;
+                document.getElementById('stopAnalysis').disabled = true;
+                document.getElementById('downloadPdfBtn').disabled = true;
+
+                // Reset stats (per session)
+                this.stats.avgConfidence = 0;
+                this.stats.identityMatches = 0;
+                this.stats.processingTime = 0;
+
+                // Optional: Shift+Click also resets persisted total analyses counter
+                if (event && event.shiftKey) {
+                    try { localStorage.removeItem('daa_total_analyses'); } catch(_) {}
+                    try { localStorage.removeItem('daa_last_processed_timestamp'); } catch(_) {}
+                    this.stats.totalAnalyses = 0;
+                    this.addLogEntry('[RESET] Total Analyses counter and external sync cleared', 'warning');
+                } else {
+                    this.addLogEntry('[RESET] Dashboard state cleared', 'info');
+                }
+
+                this.updateStats();
+            }
+
+            async downloadPdf() {
+                if (!this.lastResultData || !this.lastResultData.results || this.lastResultData.results.length === 0) {
+                    this.addLogEntry('[PDF] No analysis results to export', 'warning');
+                    return;
+                }
+                try {
+                    this.addLogEntry('[PDF] Preparing report for download...', 'info');
+                    const resp = await fetch('/api/download-pdf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            results: this.lastResultData.results,
+                            sequence_length: this.lastResultData.sequence_length || 'N/A',
+                            source: this.lastResultData.source || 'Text Input'
+                        })
+                    });
+                    if (!resp.ok) {
+                        const txt = await resp.text();
+                        throw new Error(`PDF download failed: ${txt}`);
+                    }
+                    const blob = await resp.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+                    a.href = url;
+                    a.download = `DNA_Analysis_Report_${ts}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    this.addLogEntry('[PDF] Report downloaded successfully', 'success');
+                } catch (e) {
+                    console.error(e);
+                    this.addLogEntry(`[PDF] Error: ${e.message}`, 'danger');
+                    alert('Failed to download PDF: ' + e.message);
+                }
+            }
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.liveDashboard = new LiveDashboard();
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (window.liveDashboard) {
+                // Close BroadcastChannel
+                if (window.liveDashboard.broadcastChannel) {
+                    window.liveDashboard.broadcastChannel.close();
+                }
+                // Clear localStorage polling interval
+                if (window.liveDashboard.localStorageInterval) {
+                    clearInterval(window.liveDashboard.localStorageInterval);
+                }
+            }
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,696 @@
+{% extends "base.html" %}
+
+{% block title %}AI Insights - DNAAadeshak{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="glass-card mb-4">
+                <div class="card-header gradient-bg text-white">
+                    <h2 class="mb-0">
+                        <i class="fas fa-brain me-2"></i>
+                        AI-Powered DNA Insights
+                    </h2>
+                    <p class="mb-0 mt-2">Advanced artificial intelligence analysis for comprehensive DNA sequence evaluation</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <h5><i class="fas fa-dna me-2 text-primary"></i>Sequence Input</h5>
+                            
+                            <!-- Input Method Selection -->
+                            <div class="mb-3">
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="inputMethod" id="textInput" checked>
+                                    <label class="btn btn-outline-primary" for="textInput">
+                                        <i class="fas fa-keyboard me-1"></i>Text Input
+                                    </label>
+                                    
+                                    <input type="radio" class="btn-check" name="inputMethod" id="fileInput">
+                                    <label class="btn btn-outline-primary" for="fileInput">
+                                        <i class="fas fa-file-upload me-1"></i>File Upload
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Text Input Section -->
+                            <div id="textInputSection" class="mb-3">
+                                <label for="dnaSequence" class="form-label">DNA Sequence</label>
+                                <textarea class="form-control" id="dnaSequence" rows="8" 
+                                    placeholder="Enter your DNA sequence (A, T, C, G only)..."></textarea>
+                                <div class="form-text">
+                                    <span id="sequenceLength">0</span> nucleotides
+                                    <span id="sequenceValidation" class="ms-2"></span>
+                                </div>
+                            </div>
+
+                            <!-- File Upload Section -->
+                            <div id="fileInputSection" class="mb-3" style="display: none;">
+                                <label for="sequenceFile" class="form-label">Upload DNA Sequence File</label>
+                                <input type="file" class="form-control" id="sequenceFile" accept=".txt,.fasta,.fa,.seq,.dna">
+                                <div class="form-text">
+                                    Supported formats: .txt, .fasta, .fa, .seq, .dna (max 10MB)
+                                    <div id="fileInfo" class="mt-2"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <button class="btn btn-primary btn-lg me-2" id="analyzeBtn">
+                                    <i class="fas fa-microscope me-2"></i>Run AI Analysis
+                                </button>
+                                <button class="btn btn-outline-secondary" id="loadExampleBtn">
+                                    <i class="fas fa-flask me-2"></i>Load Example
+                                </button>
+                            </div>
+
+                            <!-- Similarity Analysis Section -->
+                            <div class="mt-4">
+                                <h5><i class="fas fa-search me-2 text-info"></i>Sequence Similarity</h5>
+                                
+                                <!-- Similarity Input Method Selection -->
+                                <div class="mb-3">
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="similarityInputMethod" id="similarityTextInput" checked>
+                                        <label class="btn btn-outline-info btn-sm" for="similarityTextInput">
+                                            <i class="fas fa-keyboard me-1"></i>Text Input
+                                        </label>
+                                        
+                                        <input type="radio" class="btn-check" name="similarityInputMethod" id="similarityFileInput">
+                                        <label class="btn btn-outline-info btn-sm" for="similarityFileInput">
+                                            <i class="fas fa-file-upload me-1"></i>File Upload
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Text Input Mode -->
+                                <div id="similarityTextSection">
+                                    <div class="mb-3">
+                                        <label for="compareSequence" class="form-label">Compare with Second Sequence</label>
+                                        <textarea class="form-control" id="compareSequence" rows="4" 
+                                            placeholder="Enter second DNA sequence for comparison..."></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- File Upload Mode -->
+                                <div id="similarityFileSection" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="sequenceFile1" class="form-label">First Sequence File</label>
+                                                <input type="file" class="form-control form-control-sm" id="sequenceFile1" accept=".txt,.fasta,.fa,.seq,.dna">
+                                                <div class="form-text">
+                                                    <div id="fileInfo1" class="mt-1"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="sequenceFile2" class="form-label">Second Sequence File</label>
+                                                <input type="file" class="form-control form-control-sm" id="sequenceFile2" accept=".txt,.fasta,.fa,.seq,.dna">
+                                                <div class="form-text">
+                                                    <div id="fileInfo2" class="mt-1"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button class="btn btn-info" id="similarityBtn">
+                                    <i class="fas fa-balance-scale me-2"></i>Calculate Similarity
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <!-- Loading Animation -->
+                            <div id="loadingAnimation" class="text-center py-5" style="display: none;">
+                                <div class="dna-loader mb-3"></div>
+                                <h5>AI Analysis in Progress...</h5>
+                                <p class="text-muted">Analyzing sequence quality, mutations, and biological functions</p>
+                            </div>
+
+                            <!-- Results Container -->
+                            <div id="resultsContainer" style="display: none;">
+                                <!-- Quality Assessment -->
+                                <div class="mb-4">
+                                    <h5><i class="fas fa-check-circle me-2 text-success"></i>Quality Assessment</h5>
+                                    <div class="glass-card">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <div class="quality-score-container text-center">
+                                                        <div class="quality-score" id="qualityScore">0</div>
+                                                        <small class="text-muted">Quality Score</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div id="qualityMetrics"></div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3" id="qualityIssues"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- AI Insights -->
+                                <div class="mb-4">
+                                    <h5><i class="fas fa-lightbulb me-2 text-warning"></i>AI Insights</h5>
+                                    <div id="aiInsightsList"></div>
+                                </div>
+
+                                <!-- Function Predictions -->
+                                <div class="mb-4">
+                                    <h5><i class="fas fa-cogs me-2 text-info"></i>Function Predictions</h5>
+                                    <div class="glass-card">
+                                        <div class="card-body" id="functionPredictions"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Mutation Analysis -->
+                                <div class="mb-4">
+                                    <h5><i class="fas fa-exclamation-triangle me-2 text-danger"></i>Mutation Analysis</h5>
+                                    <div class="glass-card">
+                                        <div class="card-body" id="mutationAnalysis"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Similarity Results -->
+                            <div id="similarityResults" style="display: none;">
+                                <h5><i class="fas fa-chart-line me-2 text-info"></i>Similarity Analysis</h5>
+                                <div class="glass-card">
+                                    <div class="card-body">
+                                        <div class="text-center mb-3">
+                                            <div class="similarity-score" id="similarityScore">0%</div>
+                                            <div class="similarity-level" id="similarityLevel">-</div>
+                                        </div>
+                                        <div id="similarityInterpretation"></div>
+                                        <div class="mt-3" id="sequenceLengths"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.quality-score {
+    font-size: 3rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.similarity-score {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--info-color, #17a2b8);
+}
+
+.similarity-level {
+    font-size: 1.2rem;
+    color: var(--muted-color);
+    margin-top: -10px;
+}
+
+.insight-card {
+    border-left: 4px solid;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    background: var(--card-bg);
+}
+
+.insight-success { border-left-color: var(--success-color); }
+.insight-warning { border-left-color: var(--warning-color); }
+.insight-danger { border-left-color: var(--danger-color); }
+.insight-info { border-left-color: var(--primary-color); }
+
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.metric-item:last-child {
+    border-bottom: none;
+}
+
+.dna-loader {
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.confidence-bar {
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 5px;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--danger-color), var(--warning-color), var(--success-color));
+    transition: width 0.3s ease;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dnaSequenceInput = document.getElementById('dnaSequence');
+    const compareSequenceInput = document.getElementById('compareSequence');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const similarityBtn = document.getElementById('similarityBtn');
+    const loadExampleBtn = document.getElementById('loadExampleBtn');
+    const sequenceLength = document.getElementById('sequenceLength');
+    const sequenceValidation = document.getElementById('sequenceValidation');
+    const loadingAnimation = document.getElementById('loadingAnimation');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const similarityResults = document.getElementById('similarityResults');
+    
+    // File upload elements
+    const textInputRadio = document.getElementById('textInput');
+    const fileInputRadio = document.getElementById('fileInput');
+    const textInputSection = document.getElementById('textInputSection');
+    const fileInputSection = document.getElementById('fileInputSection');
+    const sequenceFileInput = document.getElementById('sequenceFile');
+    const fileInfo = document.getElementById('fileInfo');
+    
+    // Similarity file upload elements
+    const similarityTextInputRadio = document.getElementById('similarityTextInput');
+    const similarityFileInputRadio = document.getElementById('similarityFileInput');
+    const similarityTextSection = document.getElementById('similarityTextSection');
+    const similarityFileSection = document.getElementById('similarityFileSection');
+    const sequenceFile1Input = document.getElementById('sequenceFile1');
+    const sequenceFile2Input = document.getElementById('sequenceFile2');
+    const fileInfo1 = document.getElementById('fileInfo1');
+    const fileInfo2 = document.getElementById('fileInfo2');
+
+    // Example sequences
+    const exampleSequences = [
+        'ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCGGGCTGACGCGTACAGGAAACACAGAAAAAAGCCCGCACCTGACAGTGCGGGCTTTTTTTTTCGACCAAAGGTAACGAGGTAACAACCATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAA',
+        'CCGAGGTATGCGGCCAGAGTTGGGCGAATGGCATACTCCTCTGAACACATTAGGTGGGCGGTACTTATCCTGAACACATATCATCTCTGCTAGGGCGGCTGAATTGTCTGGATGGTATTTTGGCCAGGCTCCGGGGAGGTCAGCTACCCATGCCGAAACCGTACCTATGAGCTCGCATCATCGACTGTGGAACGACCCGCACTTACTATATCAGTGGAGTTTTGACGCTTATCTGCATCAAATCGACGCAGCCGGTAGTCGATAAAATTGTCGATTGTTGTAACTAGGCCACCGCTCAGATATGTACCCTAGACCAGCTGGCCGCTCTATTACTTGAACCGGTTTAGGAAAGCTGTAAATATTCCAA'
+    ];
+
+    // Input method switching
+    textInputRadio.addEventListener('change', function() {
+        if (this.checked) {
+            textInputSection.style.display = 'block';
+            fileInputSection.style.display = 'none';
+            updateSequenceValidation();
+        }
+    });
+
+    fileInputRadio.addEventListener('change', function() {
+        if (this.checked) {
+            textInputSection.style.display = 'none';
+            fileInputSection.style.display = 'block';
+            updateSequenceValidation();
+        }
+    });
+
+    // Similarity input method switching
+    similarityTextInputRadio.addEventListener('change', function() {
+        if (this.checked) {
+            similarityTextSection.style.display = 'block';
+            similarityFileSection.style.display = 'none';
+        }
+    });
+
+    similarityFileInputRadio.addEventListener('change', function() {
+        if (this.checked) {
+            similarityTextSection.style.display = 'none';
+            similarityFileSection.style.display = 'block';
+        }
+    });
+
+    // File upload handling
+    sequenceFileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                fileInfo.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> File too large (max 10MB)</span>';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                let sequence = '';
+                
+                // Parse different file formats
+                if (file.name.toLowerCase().includes('.fasta') || file.name.toLowerCase().includes('.fa')) {
+                    // FASTA format - skip header lines starting with >
+                    sequence = content.split('\n')
+                        .filter(line => !line.startsWith('>'))
+                        .join('')
+                        .replace(/[^ATCG]/gi, '')
+                        .toUpperCase();
+                } else {
+                    // Plain text format
+                    sequence = content.replace(/[^ATCG]/gi, '').toUpperCase();
+                }
+
+                if (sequence.length > 0) {
+                    dnaSequenceInput.value = sequence;
+                    fileInfo.innerHTML = `<span class="text-success"><i class="fas fa-check"></i> File loaded: ${sequence.length} nucleotides</span>`;
+                    updateSequenceValidation();
+                } else {
+                    fileInfo.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> No valid DNA sequence found in file</span>';
+                }
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    // Similarity file upload handling
+    function handleSimilarityFileUpload(fileInput, fileInfoElement, targetSequenceVar) {
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                    fileInfoElement.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> File too large (max 10MB)</span>';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    let sequence = '';
+                    
+                    // Parse different file formats
+                    if (file.name.toLowerCase().includes('.fasta') || file.name.toLowerCase().includes('.fa')) {
+                        // FASTA format - skip header lines starting with >
+                        sequence = content.split('\n')
+                            .filter(line => !line.startsWith('>'))
+                            .join('')
+                            .replace(/[^ATCG]/gi, '')
+                            .toUpperCase();
+                    } else {
+                        // Plain text format
+                        sequence = content.replace(/[^ATCG]/gi, '').toUpperCase();
+                    }
+
+                    if (sequence.length > 0) {
+                        fileInfoElement.innerHTML = `<span class="text-success"><i class="fas fa-check"></i> File loaded: ${sequence.length} nucleotides</span>`;
+                        // Store sequence for later use
+                        fileInput.sequenceData = sequence;
+                    } else {
+                        fileInfoElement.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> No valid DNA sequence found in file</span>';
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+    }
+
+    // Set up similarity file upload handlers
+    handleSimilarityFileUpload(sequenceFile1Input, fileInfo1, 'sequence1');
+    handleSimilarityFileUpload(sequenceFile2Input, fileInfo2, 'sequence2');
+
+    // Real-time sequence validation
+    function updateSequenceValidation() {
+        if (textInputRadio.checked) {
+            const sequence = dnaSequenceInput.value.toUpperCase().replace(/[^ATCG]/g, '');
+            const length = sequence.length;
+            sequenceLength.textContent = length;
+
+            if (length === 0) {
+                sequenceValidation.innerHTML = '';
+            } else if (/[^ATCG\s\n]/.test(dnaSequenceInput.value.toUpperCase())) {
+                sequenceValidation.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> Invalid characters</span>';
+            } else {
+                sequenceValidation.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Valid sequence</span>';
+            }
+        } else {
+            // File input mode
+            const sequence = dnaSequenceInput.value.toUpperCase().replace(/[^ATCG]/g, '');
+            const length = sequence.length;
+            sequenceLength.textContent = length;
+            
+            if (length > 0) {
+                sequenceValidation.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> File sequence loaded</span>';
+            }
+        }
+    }
+
+    dnaSequenceInput.addEventListener('input', updateSequenceValidation);
+
+    // Load example sequence
+    loadExampleBtn.addEventListener('click', function() {
+        const randomExample = exampleSequences[Math.floor(Math.random() * exampleSequences.length)];
+        dnaSequenceInput.value = randomExample;
+        dnaSequenceInput.dispatchEvent(new Event('input'));
+    });
+
+    // AI Analysis
+    analyzeBtn.addEventListener('click', async function() {
+        const sequence = dnaSequenceInput.value.trim();
+        
+        if (!sequence || sequence.length < 10) {
+            alert('Please enter a valid DNA sequence (minimum 10 nucleotides)');
+            return;
+        }
+
+        // Show loading
+        loadingAnimation.style.display = 'block';
+        resultsContainer.style.display = 'none';
+        analyzeBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/ai-insights', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sequence: sequence })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                displayAIResults(data.ai_insights);
+            } else {
+                alert('Analysis failed: ' + data.error);
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        } finally {
+            loadingAnimation.style.display = 'none';
+            analyzeBtn.disabled = false;
+        }
+    });
+
+    // Similarity Analysis
+    similarityBtn.addEventListener('click', async function() {
+        let sequence1 = '';
+        let sequence2 = '';
+        
+        if (similarityTextInputRadio.checked) {
+            // Text input mode
+            sequence1 = dnaSequenceInput.value.trim();
+            sequence2 = compareSequenceInput.value.trim();
+            
+            if (!sequence1 || !sequence2 || sequence1.length < 10 || sequence2.length < 10) {
+                alert('Please enter two valid DNA sequences (minimum 10 nucleotides each)');
+                return;
+            }
+
+            similarityBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/sequence-similarity', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        sequence1: sequence1,
+                        sequence2: sequence2 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displaySimilarityResults(data);
+                } else {
+                    alert('Similarity analysis failed: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                similarityBtn.disabled = false;
+            }
+        } else {
+            // File upload mode
+            const file1 = sequenceFile1Input.files[0];
+            const file2 = sequenceFile2Input.files[0];
+            
+            if (!file1 || !file2) {
+                alert('Please select both sequence files for comparison');
+                return;
+            }
+
+            similarityBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file1', file1);
+                formData.append('file2', file2);
+
+                const response = await fetch('/api/sequence-similarity', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displaySimilarityResults(data);
+                } else {
+                    alert('Similarity analysis failed: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                similarityBtn.disabled = false;
+            }
+        }
+    });
+
+    function displayAIResults(results) {
+        // Quality Assessment
+        const qualityScore = results.quality.quality_score;
+        document.getElementById('qualityScore').textContent = Math.round(qualityScore);
+        
+        const qualityMetrics = document.getElementById('qualityMetrics');
+        qualityMetrics.innerHTML = `
+            <div class="metric-item">
+                <span>GC Content:</span>
+                <span>${(results.quality.gc_content * 100).toFixed(1)}%</span>
+            </div>
+            <div class="metric-item">
+                <span>Complexity:</span>
+                <span>${results.quality.complexity.toFixed(2)}</span>
+            </div>
+            <div class="metric-item">
+                <span>Max Homopolymer:</span>
+                <span>${results.quality.max_homopolymer}</span>
+            </div>
+        `;
+
+        // Quality Issues
+        const qualityIssues = document.getElementById('qualityIssues');
+        if (results.quality.issues.length > 0) {
+            qualityIssues.innerHTML = `
+                <h6 class="text-warning">Issues Found:</h6>
+                <ul class="mb-0">
+                    ${results.quality.issues.map(issue => `<li>${issue}</li>`).join('')}
+                </ul>
+            `;
+        } else {
+            qualityIssues.innerHTML = '<p class="text-success mb-0"><i class="fas fa-check"></i> No quality issues detected</p>';
+        }
+
+        // AI Insights
+        const aiInsightsList = document.getElementById('aiInsightsList');
+        aiInsightsList.innerHTML = results.ai_insights.map(insight => `
+            <div class="insight-card insight-${insight.level}">
+                <h6 class="mb-2">${insight.message}</h6>
+                <p class="mb-0 small">${insight.details}</p>
+            </div>
+        `).join('');
+
+        // Function Predictions
+        const functionPredictions = document.getElementById('functionPredictions');
+        if (results.function.predictions.length > 0) {
+            functionPredictions.innerHTML = `
+                <h6>Predicted Functions:</h6>
+                <ul>
+                    ${results.function.predictions.map(pred => `<li>${pred}</li>`).join('')}
+                </ul>
+                <div class="mt-3">
+                    <strong>ORFs Found:</strong> ${results.function.orfs_found}<br>
+                    <strong>Overall Confidence:</strong> ${(results.overall_confidence * 100).toFixed(1)}%
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${results.overall_confidence * 100}%"></div>
+                    </div>
+                </div>
+            `;
+        } else {
+            functionPredictions.innerHTML = '<p class="text-muted">No specific functions predicted</p>';
+        }
+
+        // Mutation Analysis
+        const mutationAnalysis = document.getElementById('mutationAnalysis');
+        const mutations = results.mutations;
+        mutationAnalysis.innerHTML = `
+            <div class="row">
+                <div class="col-6">
+                    <strong>CpG Sites:</strong> ${mutations.cpg_sites}<br>
+                    <strong>CpG Frequency:</strong> ${(mutations.cpg_frequency * 100).toFixed(2)}%
+                </div>
+                <div class="col-6">
+                    <strong>Mutation Hotspots:</strong> ${mutations.potential_hotspots.length}
+                </div>
+            </div>
+            ${mutations.potential_hotspots.length > 0 ? `
+                <div class="mt-3">
+                    <h6>Hotspots Detected:</h6>
+                    <ul>
+                        ${mutations.potential_hotspots.map(hotspot => `
+                            <li><strong>${hotspot.type}:</strong> ${hotspot.description}</li>
+                        `).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        `;
+
+        resultsContainer.style.display = 'block';
+    }
+
+    function displaySimilarityResults(data) {
+        document.getElementById('similarityScore').textContent = data.similarity_percentage;
+        document.getElementById('similarityLevel').textContent = data.similarity_level + ' Similarity';
+        
+        document.getElementById('similarityInterpretation').innerHTML = `
+            <div class="alert alert-info">
+                <strong>Interpretation:</strong> ${data.interpretation}
+            </div>
+        `;
+        
+        document.getElementById('sequenceLengths').innerHTML = `
+            <div class="row text-center">
+                <div class="col-6">
+                    <strong>Sequence 1:</strong><br>
+                    ${data.sequence1_length} bp
+                </div>
+                <div class="col-6">
+                    <strong>Sequence 2:</strong><br>
+                    ${data.sequence2_length} bp
+                </div>
+            </div>
+        `;
+
+        similarityResults.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

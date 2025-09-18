@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+
+{% block title %}Identity Match - DNAAadeshak{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="glass-card mb-4">
+                <div class="card-header gradient-bg text-white">
+                    <h2 class="mb-0">
+                        <i class="fas fa-user-check me-2"></i>
+                        DNA Identity Matching
+                    </h2>
+                    <p class="mb-0 mt-2">Identify which person a DNA sequence belongs to using our comprehensive database</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <h5><i class="fas fa-dna me-2 text-primary"></i>DNA Sequence Input</h5>
+                            
+                            <!-- Input Method Selection -->
+                            <div class="mb-3">
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="inputMethod" id="textInput" checked>
+                                    <label class="btn btn-outline-primary" for="textInput">
+                                        <i class="fas fa-keyboard me-1"></i>Text Input
+                                    </label>
+                                    
+                                    <input type="radio" class="btn-check" name="inputMethod" id="fileInput">
+                                    <label class="btn btn-outline-primary" for="fileInput">
+                                        <i class="fas fa-file-upload me-1"></i>File Upload
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Text Input Section -->
+                            <div id="textInputSection" class="mb-3">
+                                <label for="dnaSequence" class="form-label">DNA Sequence for Identity Matching</label>
+                                <textarea class="form-control" id="dnaSequence" rows="8" 
+                                    placeholder="Enter DNA sequence (minimum 50 nucleotides for accurate matching)..."></textarea>
+                                <div class="form-text">
+                                    <span id="sequenceLength">0</span> nucleotides
+                                    <span id="sequenceValidation" class="ms-2"></span>
+                                </div>
+                            </div>
+
+                            <!-- File Upload Section -->
+                            <div id="fileInputSection" class="mb-3" style="display: none;">
+                                <label for="sequenceFile" class="form-label">Upload DNA Sequence File</label>
+                                <input type="file" class="form-control" id="sequenceFile" accept=".txt,.fasta,.fa,.seq,.dna">
+                                <div class="form-text">
+                                    Supported formats: .txt, .fasta, .fa, .seq, .dna (max 10MB)
+                                    <div id="fileInfo" class="mt-2"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="topMatches" class="form-label">Number of Top Matches</label>
+                                <select class="form-select" id="topMatches">
+                                    <option value="3">Top 3 Matches</option>
+                                    <option value="5" selected>Top 5 Matches</option>
+                                    <option value="10">Top 10 Matches</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <button class="btn btn-primary btn-lg me-2" id="identifyBtn">
+                                    <i class="fas fa-search me-2"></i>Identify Person
+                                </button>
+                                <button class="btn btn-outline-secondary" id="loadExampleBtn">
+                                    <i class="fas fa-flask me-2"></i>Load Example
+                                </button>
+                                <button class="btn btn-outline-info ms-2" id="dbStatsBtn">
+                                    <i class="fas fa-database me-2"></i>Database Stats
+                                </button>
+                            </div>
+
+                            <!-- Database Stats -->
+                            <div id="databaseStats" class="mt-4" style="display: none;">
+                                <h5><i class="fas fa-chart-bar me-2 text-info"></i>Database Information</h5>
+                                <div class="glass-card">
+                                    <div class="card-body" id="statsContent"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <!-- Loading Animation -->
+                            <div id="loadingAnimation" class="text-center py-5" style="display: none;">
+                                <div class="dna-loader mb-3"></div>
+                                <h5>Searching DNA Database...</h5>
+                                <p class="text-muted">Analyzing sequence against thousands of DNA profiles</p>
+                            </div>
+
+                            <!-- Results Container -->
+                            <div id="resultsContainer" style="display: none;">
+                                <h5><i class="fas fa-users me-2 text-success"></i>Identity Match Results</h5>
+                                
+                                <!-- Query Info -->
+                                <div class="mb-3">
+                                    <div class="glass-card">
+                                        <div class="card-body">
+                                            <div class="row text-center">
+                                                <div class="col-4">
+                                                    <strong>Query Length</strong><br>
+                                                    <span id="queryLength" class="text-primary">0</span> bp
+                                                </div>
+                                                <div class="col-4">
+                                                    <strong>Database Size</strong><br>
+                                                    <span id="dbSize" class="text-info">0</span> people
+                                                </div>
+                                                <div class="col-4">
+                                                    <strong>Total Records</strong><br>
+                                                    <span id="totalRecords" class="text-success">0</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Match Results -->
+                                <div id="matchResults"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.match-card {
+    border-left: 4px solid;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.match-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.match-very-high { border-left-color: #28a745; }
+.match-high { border-left-color: #17a2b8; }
+.match-medium { border-left-color: #ffc107; }
+.match-low { border-left-color: #fd7e14; }
+.match-very-low { border-left-color: #dc3545; }
+
+.similarity-score {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.confidence-badge {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.person-details {
+    font-size: 0.9rem;
+    color: var(--muted-color);
+}
+
+.dna-loader {
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.person-info-btn {
+    font-size: 0.8rem;
+    padding: 2px 8px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dnaSequenceInput = document.getElementById('dnaSequence');
+    const identifyBtn = document.getElementById('identifyBtn');
+    const loadExampleBtn = document.getElementById('loadExampleBtn');
+    const dbStatsBtn = document.getElementById('dbStatsBtn');
+    const topMatchesSelect = document.getElementById('topMatches');
+    const sequenceLength = document.getElementById('sequenceLength');
+    const sequenceValidation = document.getElementById('sequenceValidation');
+    const loadingAnimation = document.getElementById('loadingAnimation');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const databaseStats = document.getElementById('databaseStats');
+    
+    // File upload elements
+    const textInputRadio = document.getElementById('textInput');
+    const fileInputRadio = document.getElementById('fileInput');
+    const textInputSection = document.getElementById('textInputSection');
+    const fileInputSection = document.getElementById('fileInputSection');
+    const sequenceFileInput = document.getElementById('sequenceFile');
+    const fileInfo = document.getElementById('fileInfo');
+
+    // Example sequences from the database
+    const exampleSequences = [
+        'ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCGGGCTGACGCGTACAGGAAACACAGAAAAAAGCCCGCACCTGACAGTGCGGGCTTTTTTTTTCGACCAAAGGTAACGAGGTAACAACCATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAA',
+        'CCGAGGTATGCGGCCAGAGTTGGGCGAATGGCATACTCCTCTGAACACATTAGGTGGGCGGTACTTATCCTGAACACATATCATCTCTGCTAGGGCGGCTGAATTGTCTGGATGGTATTTTGGCCAGGCTCCGGGGAGGTCAGCTACCCATGCCGAAACCGTACCTATGAGCTCGCATCATCGACTGTGGAACGACCCGCACTTACTATATCAGTGGAGTTTTGACGCTTATCTGCATCAAATCGACGCAGCCGGTAGTCGATAAAATTGTCGATTGTTGTAACTAGGCCACCGCTCAGATATGTACCCTAGACCAGCTGGCCGCTCTATTACTTGAACCGGTTTAGGAAAGCTGTAAATATTCCAA',
+        'TATAAAAGGCCCAATGCGGGCATCAGGTAATGCCACCGACGTGATATTCGCCCCGGTTTAGGGGCTTGCCGCGGGTTGTAACGCCGATGGGGTTCTCTGTCCTGAAGCCCGACCATTCTTGTCTAGCATATCCTAAGTGGAAGCGGGTGTCTGGGTCAGTGAGACTCGGAACTCCTCACTCGCGGGCGGGGGGGGACATGTGCCCTTGGCTCTTGGTGTTGCGAAGGGCAACACATAAATTG'
+    ];
+
+    // Input method switching
+    textInputRadio.addEventListener('change', function() {
+        if (this.checked) {
+            textInputSection.style.display = 'block';
+            fileInputSection.style.display = 'none';
+            updateSequenceValidation();
+        }
+    });
+
+    fileInputRadio.addEventListener('change', function() {
+        if (this.checked) {
+            textInputSection.style.display = 'none';
+            fileInputSection.style.display = 'block';
+            updateSequenceValidation();
+        }
+    });
+
+    // File upload handling
+    sequenceFileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                fileInfo.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle"></i> File too large (max 10MB)</span>';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                let sequence = '';
+                
+                // Parse different file formats
+                if (file.name.toLowerCase().includes('.fasta') || file.name.toLowerCase().includes('.fa')) {
+                    // FASTA format - skip header lines starting with >
+                    sequence = content.split('\n')
+                        .filter(line => !line.startsWith('>'))
+                        .join('')
+                        .replace(/[^ATCG]/gi, '')
+                        .toUpperCase();
+                } else {
+                    // Plain text format
+                    sequence = content.replace(/[^ATCG]/gi, '').toUpperCase();
+                }
+
+                if (sequence.length > 0) {
+                    dnaSequenceInput.value = sequence;
+                    fileInfo.innerHTML = `<span class="text-success"><i class="fas fa-check"></i> File loaded: ${sequence.length} nucleotides</span>`;
+                    updateSequenceValidation();
+                } else {
+                    fileInfo.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> No valid DNA sequence found in file</span>';
+                }
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    // Real-time sequence validation
+    function updateSequenceValidation() {
+        const sequence = dnaSequenceInput.value.toUpperCase().replace(/[^ATCG]/g, '');
+        const length = sequence.length;
+        sequenceLength.textContent = length;
+
+        if (length === 0) {
+            sequenceValidation.innerHTML = '';
+        } else if (length < 50) {
+            sequenceValidation.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Too short for accurate matching</span>';
+        } else if (/[^ATCG\s\n]/.test(dnaSequenceInput.value.toUpperCase())) {
+            sequenceValidation.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> Invalid characters</span>';
+        } else {
+            sequenceValidation.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Valid for matching</span>';
+        }
+    }
+
+    dnaSequenceInput.addEventListener('input', updateSequenceValidation);
+
+    // Load example sequence
+    loadExampleBtn.addEventListener('click', function() {
+        const randomExample = exampleSequences[Math.floor(Math.random() * exampleSequences.length)];
+        dnaSequenceInput.value = randomExample;
+        dnaSequenceInput.dispatchEvent(new Event('input'));
+    });
+
+    // Database stats
+    dbStatsBtn.addEventListener('click', async function() {
+        try {
+            const response = await fetch('/api/database-stats');
+            const data = await response.json();
+
+            if (data.success) {
+                displayDatabaseStats(data.database_stats);
+                databaseStats.style.display = databaseStats.style.display === 'none' ? 'block' : 'none';
+            } else {
+                alert('Failed to load database stats: ' + data.error);
+            }
+        } catch (error) {
+            alert('Error loading database stats: ' + error.message);
+        }
+    });
+
+    // Identity matching
+    identifyBtn.addEventListener('click', async function() {
+        const sequence = dnaSequenceInput.value.trim();
+        
+        if (!sequence || sequence.length < 50) {
+            alert('Please enter a valid DNA sequence (minimum 50 nucleotides)');
+            return;
+        }
+
+        const topN = parseInt(topMatchesSelect.value);
+
+        // Show loading
+        loadingAnimation.style.display = 'block';
+        resultsContainer.style.display = 'none';
+        identifyBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/identify-person', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    sequence: sequence,
+                    top_n: topN
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                displayIdentityResults(data);
+            } else {
+                alert('Identity matching failed: ' + data.error);
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        } finally {
+            loadingAnimation.style.display = 'none';
+            identifyBtn.disabled = false;
+        }
+    });
+
+    function displayDatabaseStats(stats) {
+        const statsContent = document.getElementById('statsContent');
+        
+        statsContent.innerHTML = `
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value">${stats.unique_people.toLocaleString()}</div>
+                    <div>Unique People</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${stats.total_records.toLocaleString()}</div>
+                    <div>Total Records</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${Math.round(stats.avg_sequences_per_person)}</div>
+                    <div>Avg Sequences/Person</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${Math.round(stats.sequence_length_stats.mean)}</div>
+                    <div>Avg Sequence Length</div>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h6>Class Distribution:</h6>
+                <div class="row">
+                    ${Object.entries(stats.classes_distribution).map(([className, count]) => `
+                        <div class="col-4 text-center">
+                            <strong>${className}:</strong> ${count.toLocaleString()}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function displayIdentityResults(data) {
+        // Update query info
+        document.getElementById('queryLength').textContent = data.query_sequence_length.toLocaleString();
+        document.getElementById('dbSize').textContent = data.database_stats.total_people.toLocaleString();
+        document.getElementById('totalRecords').textContent = data.database_stats.total_records.toLocaleString();
+
+        // Display matches
+        const matchResults = document.getElementById('matchResults');
+        matchResults.innerHTML = data.matches.map((match, index) => {
+            const confidenceClass = match.confidence.toLowerCase().replace(' ', '-');
+            const similarityPercent = (match.similarity_score * 100).toFixed(1);
+            
+            return `
+                <div class="glass-card match-card match-${confidenceClass}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-3 text-center">
+                                <div class="similarity-score text-primary">${similarityPercent}%</div>
+                                <span class="confidence-badge bg-${getConfidenceColor(match.confidence)} text-white">
+                                    ${match.confidence}
+                                </span>
+                            </div>
+                            <div class="col-6">
+                                <h5 class="mb-1">${match.person_name}</h5>
+                                <div class="person-details">
+                                    <div><strong>DOB:</strong> ${match.metadata.dob}</div>
+                                    <div><strong>Class:</strong> ${match.metadata.class}</div>
+                                    <div><strong>Mobile:</strong> ${match.metadata.mobile_no}</div>
+                                </div>
+                            </div>
+                            <div class="col-3 text-end">
+                                <div class="small text-muted">
+                                    <div><strong>Rank:</strong> #${index + 1}</div>
+                                    <div><strong>DB Sequences:</strong> ${match.sequence_count}</div>
+                                    <div><strong>Avg Length:</strong> ${match.avg_sequence_length} bp</div>
+                                </div>
+                                <button class="btn btn-outline-info btn-sm person-info-btn mt-2" 
+                                        onclick="getPersonDetails('${match.person_name}')">
+                                    <i class="fas fa-info-circle"></i> Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        resultsContainer.style.display = 'block';
+    }
+
+    function getConfidenceColor(confidence) {
+        const colors = {
+            'Very High': 'success',
+            'High': 'info',
+            'Medium': 'warning',
+            'Low': 'secondary',
+            'Very Low': 'danger'
+        };
+        return colors[confidence] || 'secondary';
+    }
+
+    // Global function for person details
+    window.getPersonDetails = async function(personName) {
+        try {
+            const response = await fetch(`/api/person-details/${encodeURIComponent(personName)}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const details = data.person_details;
+                alert(`Person Details:\n\nName: ${details.name}\nDOB: ${details.metadata.dob}\nMobile: ${details.metadata.mobile_no}\nClass: ${details.metadata.class}\n\nSequences in DB: ${details.sequence_count}\nTotal Base Pairs: ${details.total_base_pairs.toLocaleString()}\nAvg Sequence Length: ${Math.round(details.avg_sequence_length)} bp\nUnique K-mers: ${details.unique_kmers}`);
+            } else {
+                alert('Failed to get person details: ' + data.error);
+            }
+        } catch (error) {
+            alert('Error getting person details: ' + error.message);
+        }
+    };
+});
+</script>
+{% endblock %}

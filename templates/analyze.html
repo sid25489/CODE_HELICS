@@ -1,0 +1,941 @@
+{% extends "base.html" %}
+
+{% block title %}DNA Sequence Analyzer - Analyze{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card glass-card fade-in">
+                <div class="card-header gradient-bg">
+                    <h4 class="mb-0">
+                        <i class="fas fa-microscope me-2 floating"></i>
+                        DNA Sequence Analysis
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Input Method Selection -->
+                    <div class="mb-4">
+                        <div class="btn-group w-100" role="group" aria-label="Input method">
+                            <input type="radio" class="btn-check" name="input-method" id="text-input" checked>
+                            <label class="btn btn-outline-primary" for="text-input">
+                                <i class="fas fa-keyboard me-2"></i>Text Input
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="input-method" id="file-input">
+                            <label class="btn btn-outline-primary" for="file-input">
+                                <i class="fas fa-file-upload me-2"></i>File Upload
+                            </label>
+                        </div>
+                    </div>
+
+                    <form id="dna-form">
+                        <!-- Text Input Section -->
+                        <div id="text-input-section" class="input-section">
+                            <div class="mb-4">
+                                <label for="dna-sequence" class="form-label">
+                                    <strong>DNA Sequence</strong>
+                                    <small class="text-muted">(Enter A, T, C, G nucleotides only)</small>
+                                </label>
+                                <textarea 
+                                    class="form-control dna-sequence" 
+                                    id="dna-sequence" 
+                                    rows="8" 
+                                    placeholder="Enter your DNA sequence here... Example: ATCGATCGATCGTAGCTAGCTA..."
+                                ></textarea>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Minimum 10 nucleotides required. Spaces and line breaks will be automatically removed.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File Upload Section -->
+                        <div id="file-input-section" class="input-section" style="display: none;">
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <strong>Upload DNA File</strong>
+                                    <small class="text-muted">(Supported formats: .txt, .fasta, .fa, .fas, .seq, .dna)</small>
+                                </label>
+                                
+                                <!-- Drag and Drop Area -->
+                                <div class="file-drop-area" id="file-drop-area">
+                                    <div class="file-drop-content">
+                                        <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-primary"></i>
+                                        <h5>Drag & Drop your DNA file here</h5>
+                                        <p class="text-muted">or click to browse files</p>
+                                        <input type="file" id="dna-file" accept=".txt,.fasta,.fa,.fas,.seq,.dna" style="display: none;">
+                                        <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('dna-file').click()">
+                                            <i class="fas fa-folder-open me-2"></i>Browse Files
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- File Info Display -->
+                                <div id="file-info" class="mt-3" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-file me-2"></i>
+                                        <strong>Selected File:</strong> <span id="file-name"></span>
+                                        <br>
+                                        <small><strong>Size:</strong> <span id="file-size"></span> | <strong>Type:</strong> <span id="file-type"></span></small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger float-end" onclick="clearFile()">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card glass-card slide-in-left">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">Sequence Length</h6>
+                                        <span id="sequence-length" class="h4 text-primary pulse-glow">0</span>
+                                        <small class="text-muted d-block">nucleotides</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card glass-card slide-in-right">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">Validation Status</h6>
+                                        <span id="validation-status" class="h6">
+                                            <i class="fas fa-clock text-muted floating"></i> Waiting
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Quick Examples:</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadExample(1)">
+                                    Example 1 (Short)
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadExample(2)">
+                                    Example 2 (Medium)
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadExample(3)">
+                                    Example 3 (Long)
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearSequence()">
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="analyze-btn">
+                                <i class="fas fa-play me-2"></i>
+                                <span id="analyze-btn-text">Analyze DNA Sequence</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-lg" id="live-dashboard-btn" onclick="openLiveDashboard()">
+                                <i class="fas fa-chart-line me-2"></i>
+                                <span id="dashboard-btn-text">View Live Dashboard</span>
+                            </button>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <small>Live Dashboard will automatically receive updates from analyses performed here</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="mt-4" style="display: none;">
+                <div class="card glass-card">
+                    <div class="card-header gradient-bg">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2 floating"></i>
+                            Analysis Results
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="results-content">
+                            <!-- Results will be populated here -->
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-outline-primary" onclick="downloadPDF()" id="download-pdf-btn">
+                                <i class="fas fa-file-pdf me-2"></i>
+                                Download PDF Report
+                            </button>
+                            <button class="btn btn-outline-success" onclick="saveResults()">
+                                <i class="fas fa-save me-2"></i>
+                                Save Results
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="analyzeAnother()">
+                                <i class="fas fa-redo me-2"></i>
+                                Analyze Another
+                            </button>
+                        </div>
+                        
+                        <!-- Live Dashboard Update Notification -->
+                        <div id="dashboard-update-notification" class="alert alert-info mt-3" style="display: none;">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div>
+                                    <strong>Live Dashboard Updated!</strong>
+                                    <br><small>Analysis results have been sent to any open Live Dashboard windows.</small>
+                                </div>
+                                <button type="button" class="btn-close ms-auto" onclick="hideDashboardNotification()"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Loading Section -->
+            <div id="loading-section" class="mt-4" style="display: none;">
+                <div class="card glass-card pulse-glow">
+                    <div class="card-body text-center">
+                        <div class="dna-loading-animation mb-4">
+                            <div class="liquid-loader morph-shape"></div>
+                            <div class="loading-helix">
+                                <div class="helix-strand strand-1"></div>
+                                <div class="helix-strand strand-2"></div>
+                            </div>
+                        </div>
+                        <h5 class="fade-in loading-text">Analyzing DNA Sequence...</h5>
+                        <p class="text-muted fade-in loading-subtext" style="animation-delay: 0.2s">Processing k-mers and running classification model</p>
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated dna-progress" 
+                                 role="progressbar" style="width: 0%" id="analysis-progress"></div>
+                        </div>
+                        <div class="loading-steps">
+                            <div class="step-indicator active" data-step="1">
+                                <i class="fas fa-upload"></i>
+                                <span>Input Processing</span>
+                            </div>
+                            <div class="step-indicator" data-step="2">
+                                <i class="fas fa-cogs"></i>
+                                <span>Feature Extraction</span>
+                            </div>
+                            <div class="step-indicator" data-step="3">
+                                <i class="fas fa-brain"></i>
+                                <span>ML Classification</span>
+                            </div>
+                            <div class="step-indicator" data-step="4">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Results Generation</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const examples = {
+        1: "ATCGATCGATCGTAGCTAGCTAGCTAATCGATCG",
+        2: "ATCGATCGATCGTAGCTAGCTAGCTAATCGATCGTTAACCGGTTAACCGGTTAAGCTAGCTAGCTACGGAATTCCGGAATTCCGGA",
+        3: "ATCGATCGATCGTAGCTAGCTAGCTAATCGATCGTTAACCGGTTAACCGGTTAAGCTAGCTAGCTACGGAATTCCGGAATTCCGGAAATTGGCCAATTGGCCAATTCGATCGATCGATCGTAGCTAGCTAGCTAATCGATCGTTAACCGGTTAACCGGTTAAGCTAGCTAGCTACGGAATTCCGGAATTCCGGAAATTGGCCAATTGGCCAATT"
+    };
+
+    let selectedFile = null;
+    let currentAnalysisResults = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const sequenceInput = document.getElementById('dna-sequence');
+        const lengthDisplay = document.getElementById('sequence-length');
+        const validationStatus = document.getElementById('validation-status');
+        const form = document.getElementById('dna-form');
+        const fileDropArea = document.getElementById('file-drop-area');
+        const fileInput = document.getElementById('dna-file');
+
+        // Input method switching
+        document.querySelectorAll('input[name="input-method"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                switchInputMethod(this.id);
+            });
+        });
+
+        // Real-time sequence validation
+        sequenceInput.addEventListener('input', function() {
+            const sequence = this.value.replace(/\s/g, '').toUpperCase();
+            lengthDisplay.textContent = sequence.length;
+
+            if (sequence.length === 0) {
+                validationStatus.innerHTML = '<i class="fas fa-clock text-muted"></i> Waiting';
+            } else if (validateDNASequence(sequence)) {
+                if (sequence.length >= 10) {
+                    validationStatus.innerHTML = '<i class="fas fa-check text-success"></i> Valid';
+                } else {
+                    validationStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-warning"></i> Too Short';
+                }
+            } else {
+                validationStatus.innerHTML = '<i class="fas fa-times text-danger"></i> Invalid';
+            }
+        });
+
+        // File upload handling
+        fileInput.addEventListener('change', function(e) {
+            handleFileSelect(e.target.files[0]);
+        });
+
+        // Drag and drop functionality
+        fileDropArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('drag-over');
+        });
+
+        fileDropArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+        });
+
+        fileDropArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        // Make drop area clickable
+        fileDropArea.addEventListener('click', function() {
+            fileInput.click();
+        });
+
+        // Form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            analyzeSequence();
+        });
+    });
+
+    function loadExample(num) {
+        document.getElementById('dna-sequence').value = examples[num];
+        document.getElementById('dna-sequence').dispatchEvent(new Event('input'));
+    }
+
+    function clearSequence() {
+        document.getElementById('dna-sequence').value = '';
+        document.getElementById('dna-sequence').dispatchEvent(new Event('input'));
+    }
+
+    function switchInputMethod(method) {
+        const textSection = document.getElementById('text-input-section');
+        const fileSection = document.getElementById('file-input-section');
+        const analyzeBtn = document.getElementById('analyze-btn-text');
+        
+        if (method === 'text-input') {
+            textSection.style.display = 'block';
+            fileSection.style.display = 'none';
+            analyzeBtn.textContent = 'Analyze DNA Sequence';
+            clearFile();
+        } else {
+            textSection.style.display = 'none';
+            fileSection.style.display = 'block';
+            analyzeBtn.textContent = 'Analyze DNA File';
+            clearSequence();
+        }
+        
+        // Add fade animation
+        textSection.style.opacity = method === 'text-input' ? '1' : '0';
+        fileSection.style.opacity = method === 'file-input' ? '1' : '0';
+    }
+
+    function handleFileSelect(file) {
+        if (!file) return;
+        
+        const allowedTypes = ['txt', 'fasta', 'fa', 'fas', 'seq', 'dna'];
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedTypes.includes(fileExtension)) {
+            showAlert('Invalid file type. Please select a DNA file (.txt, .fasta, .fa, .fas, .seq, .dna)', 'danger');
+            return;
+        }
+        
+        if (file.size > 16 * 1024 * 1024) { // 16MB limit
+            showAlert('File too large. Maximum size is 16MB.', 'danger');
+            return;
+        }
+        
+        selectedFile = file;
+        
+        // Display file info
+        document.getElementById('file-name').textContent = file.name;
+        document.getElementById('file-size').textContent = formatFileSize(file.size);
+        document.getElementById('file-type').textContent = fileExtension.toUpperCase();
+        document.getElementById('file-info').style.display = 'block';
+        
+        // Update validation status
+        document.getElementById('validation-status').innerHTML = '<i class="fas fa-file-check text-success"></i> File Ready';
+        document.getElementById('sequence-length').textContent = 'File';
+        
+        // Add success animation to drop area
+        const dropArea = document.getElementById('file-drop-area');
+        dropArea.classList.add('file-selected');
+        setTimeout(() => dropArea.classList.remove('file-selected'), 1000);
+    }
+
+    function clearFile() {
+        selectedFile = null;
+        document.getElementById('dna-file').value = '';
+        document.getElementById('file-info').style.display = 'none';
+        document.getElementById('validation-status').innerHTML = '<i class="fas fa-clock text-muted"></i> Waiting';
+        document.getElementById('sequence-length').textContent = '0';
+        
+        const dropArea = document.getElementById('file-drop-area');
+        dropArea.classList.remove('file-selected', 'drag-over');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    async function analyzeSequence() {
+        const isFileMode = document.getElementById('file-input').checked;
+        
+        // Validate input based on mode
+        if (isFileMode) {
+            if (!selectedFile) {
+                showAlert('Please select a DNA file to analyze', 'warning');
+                return;
+            }
+        } else {
+            const sequence = document.getElementById('dna-sequence').value.replace(/\s/g, '').toUpperCase();
+            
+            if (!validateDNASequence(sequence)) {
+                showAlert('Please enter a valid DNA sequence (A, T, C, G only)', 'danger');
+                return;
+            }
+
+            if (sequence.length < 10) {
+                showAlert('DNA sequence must be at least 10 nucleotides long', 'warning');
+                return;
+            }
+        }
+
+        // Show enhanced loading with step-by-step animation
+        const loadingSection = document.getElementById('loading-section');
+        const resultsSection = document.getElementById('results-section');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        
+        loadingSection.style.display = 'block';
+        loadingSection.style.opacity = '0';
+        setTimeout(() => loadingSection.style.opacity = '1', 10);
+        
+        resultsSection.style.display = 'none';
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analyzing...';
+
+        // For file mode (non-stream), use animated steps; for text mode we stream and update steps live
+        if (isFileMode) {
+            animateLoadingSteps();
+        } else {
+            // Reset progress/steps for live stream
+            setLoadingStep(1, 'Processing input data...', 'Validating DNA sequence format', 5);
+        }
+
+        try {
+            let response;
+            
+            if (isFileMode) {
+                // File upload
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                response = await fetch('/api/analyze-dna', {
+                    method: 'POST',
+                    body: formData
+                });
+            } else {
+                // Text input via streaming endpoint
+                const sequence = document.getElementById('dna-sequence').value.replace(/\s/g, '').toUpperCase();
+                await analyzeSequenceStream(sequence);
+                return; // streaming handles UI and completion
+            }
+
+            // Non-streaming (file mode) path
+            const data = await response.json();
+
+            if (data.success) {
+                currentAnalysisResults = data; // Store results for PDF generation
+                await completeLoadingAnimation();
+                displayResults(data);
+            } else {
+                throw new Error(data.error || 'Analysis failed');
+            }
+        } catch (error) {
+            showAlert(`Analysis failed: ${error.message}`, 'danger');
+        } finally {
+            loadingSection.style.opacity = '0';
+            setTimeout(() => loadingSection.style.display = 'none', 300);
+            
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-play me-2"></i><span id="analyze-btn-text">' + 
+                (isFileMode ? 'Analyze DNA File' : 'Analyze DNA Sequence') + '</span>';
+        }
+    }
+
+    async function analyzeSequenceStream(sequence) {
+        const progressBar = document.getElementById('analysis-progress');
+        const loadingText = document.querySelector('.loading-text');
+        const loadingSubtext = document.querySelector('.loading-subtext');
+
+        try {
+            const res = await fetch(`/api/analyze-dna-stream?sequence=${encodeURIComponent(sequence)}`);
+            if (!res.ok || !res.body) throw new Error('Failed to start streaming analysis');
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                let lines = buffer.split('\n');
+                buffer = lines.pop(); // keep last partial line
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    let msg;
+                    try {
+                        msg = JSON.parse(line);
+                    } catch (_) {
+                        continue;
+                    }
+
+                    if (msg.event === 'progress') {
+                        setLoadingStep(msg.step, msg.message || loadingText.textContent, '...', msg.progress || 0);
+                    } else if (msg.event === 'result') {
+                        const data = msg.data;
+                        currentAnalysisResults = data;
+                        progressBar.style.width = '100%';
+                        loadingText.textContent = 'Analysis Complete!';
+                        loadingSubtext.textContent = 'Preparing results...';
+                        await completeLoadingAnimation();
+                        displayResults(data);
+                    } else if (msg.event === 'error') {
+                        showAlert(msg.error || 'Streaming analysis failed', 'danger');
+                    }
+                }
+            }
+        } catch (e) {
+            showAlert(`Streaming failed: ${e.message}`, 'danger');
+        }
+    }
+
+    function setLoadingStep(step, message, subtext, progress) {
+        const steps = document.querySelectorAll('.step-indicator');
+        const progressBar = document.getElementById('analysis-progress');
+        const loadingText = document.querySelector('.loading-text');
+        const loadingSubtext = document.querySelector('.loading-subtext');
+
+        steps.forEach((el, idx) => {
+            if (idx < step) el.classList.add('active');
+        });
+        if (typeof progress === 'number') {
+            progressBar.style.width = Math.min(100, Math.max(0, progress)) + '%';
+        }
+        if (message) loadingText.textContent = message;
+        if (subtext) loadingSubtext.textContent = subtext;
+    }
+    
+    function animateLoadingSteps() {
+        const steps = document.querySelectorAll('.step-indicator');
+        const progressBar = document.getElementById('analysis-progress');
+        const loadingText = document.querySelector('.loading-text');
+        const loadingSubtext = document.querySelector('.loading-subtext');
+        
+        const stepTexts = [
+            'Processing input data...',
+            'Extracting k-mer features...',
+            'Running ML classification...',
+            'Generating results...'
+        ];
+        
+        const subtexts = [
+            'Validating DNA sequence format',
+            'Computing nucleotide patterns',
+            'Applying RandomForest model',
+            'Calculating probabilities'
+        ];
+        
+        let currentStep = 0;
+        
+        const stepInterval = setInterval(() => {
+            if (currentStep < steps.length) {
+                // Activate current step
+                steps[currentStep].classList.add('active');
+                
+                // Update text
+                loadingText.textContent = stepTexts[currentStep];
+                loadingSubtext.textContent = subtexts[currentStep];
+                
+                // Update progress
+                const progress = ((currentStep + 1) / steps.length) * 100;
+                progressBar.style.width = progress + '%';
+                
+                // Add glitch effect occasionally
+                if (Math.random() < 0.3) {
+                    loadingText.classList.add('glitch-effect');
+                    setTimeout(() => loadingText.classList.remove('glitch-effect'), 300);
+                }
+                
+                currentStep++;
+            } else {
+                clearInterval(stepInterval);
+            }
+        }, 1000);
+    }
+    
+    async function completeLoadingAnimation() {
+        return new Promise(resolve => {
+            const progressBar = document.getElementById('analysis-progress');
+            const loadingText = document.querySelector('.loading-text');
+            const loadingSubtext = document.querySelector('.loading-subtext');
+            
+            progressBar.style.width = '100%';
+            loadingText.textContent = 'Analysis Complete!';
+            loadingSubtext.textContent = 'Preparing results...';
+            
+            setTimeout(() => {
+                resolve();
+            }, 500);
+        });
+    }
+
+    function displayResults(data) {
+        const resultsContent = document.getElementById('results-content');
+        const resultsSection = document.getElementById('results-section');
+        
+        let html = `
+            <div class="mb-4 fade-in">
+                <h6>Sequence Information</h6>
+                <p><strong>Length:</strong> ${data.sequence_length} nucleotides</p>
+                <p><strong>Source:</strong> ${data.source === 'file' ? 'File Upload' : 'Text Input'}</p>
+                <p><strong>Analysis Date:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <h6 class="fade-in">Identity Match Probabilities</h6>
+        `;
+
+        data.results.forEach((result, index) => {
+            const percentage = (result.probability * 100).toFixed(1);
+            const confidenceClass = `confidence-${result.confidence.toLowerCase()}`;
+            
+            html += `
+                <div class="result-item card mb-3 ${confidenceClass} fade-in" style="animation-delay: ${index * 0.1}s">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">${result.identity}</h6>
+                            <span class="badge bg-primary">${percentage}%</span>
+                        </div>
+                        <div class="progress mb-2" style="height: 10px;">
+                            <div class="progress-bar progress-bar-animated" role="progressbar" 
+                                 style="width: 0%; animation-delay: ${index * 0.1 + 0.5}s" 
+                                 data-width="${percentage}"
+                                 aria-valuenow="${percentage}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            Confidence: <strong>${result.confidence}</strong>
+                        </small>
+                    </div>
+                </div>
+            `;
+        });
+
+        resultsContent.innerHTML = html;
+        resultsSection.style.display = 'block';
+        resultsSection.style.opacity = '0';
+        
+        // Animate results appearance
+        setTimeout(() => {
+            resultsSection.style.opacity = '1';
+            
+            // Animate progress bars
+            setTimeout(() => {
+                document.querySelectorAll('.progress-bar').forEach(bar => {
+                    const width = bar.getAttribute('data-width');
+                    bar.style.width = width + '%';
+                });
+            }, 500);
+        }, 100);
+        
+        // Scroll to results with smooth animation
+        setTimeout(() => {
+            resultsSection.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }, 200);
+        
+        // Send analysis results to live dashboard for real-time updates
+        updateLiveDashboard(data);
+    }
+
+    async function downloadPDF() {
+        if (!currentAnalysisResults) {
+            showAlert('No analysis results available for download', 'warning');
+            return;
+        }
+
+        const downloadBtn = document.getElementById('download-pdf-btn');
+        const originalText = downloadBtn.innerHTML;
+        
+        try {
+            // Show loading state
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating PDF...';
+            
+            const response = await fetch('/api/download-pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(currentAnalysisResults)
+            });
+
+            if (response.ok) {
+                // Create blob from response
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                // Get filename from response headers or create default
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'DNA_Analysis_Report.pdf';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showAlert('PDF report downloaded successfully!', 'success');
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'PDF download failed');
+            }
+        } catch (error) {
+            showAlert(`PDF download failed: ${error.message}`, 'danger');
+        } finally {
+            // Reset button state
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = originalText;
+        }
+    }
+
+    function saveResults() {
+        // In a real application, this would save to a database or download
+        showAlert('Results saved successfully!', 'success');
+    }
+
+    function analyzeAnother() {
+        document.getElementById('results-section').style.display = 'none';
+        document.getElementById('dna-sequence').focus();
+        currentAnalysisResults = null; // Clear stored results
+        clearSequence();
+    }
+
+    function openLiveDashboard() {
+        const isFileMode = document.getElementById('file-input').checked;
+        const dashboardBtn = document.getElementById('live-dashboard-btn');
+        const btnText = document.getElementById('dashboard-btn-text');
+        let sequence = '';
+        
+        if (!isFileMode) {
+            sequence = document.getElementById('dna-sequence').value.replace(/\s/g, '').toUpperCase();
+        }
+        
+        // Update button to show loading state
+        const originalText = btnText.textContent;
+        btnText.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Opening Dashboard...';
+        dashboardBtn.disabled = true;
+        
+        // Open Live Dashboard in new tab/window
+        const dashboardUrl = '/live-dashboard';
+        const newWindow = window.open(dashboardUrl, '_blank');
+        
+        // Reset button after a short delay
+        setTimeout(() => {
+            btnText.innerHTML = originalText;
+            dashboardBtn.disabled = false;
+        }, 2000);
+        
+        // Pre-fill sequence after a short delay to ensure page loads
+        if (sequence && sequence.length >= 10) {
+            setTimeout(() => {
+                try {
+                    // Try to access the new window and set the sequence
+                    if (newWindow && !newWindow.closed) {
+                        newWindow.postMessage({
+                            type: 'prefill_sequence',
+                            sequence: sequence
+                        }, window.location.origin);
+                        
+                        // Show success message
+                        showAlert('Live Dashboard opened with pre-filled sequence!', 'success');
+                    }
+                } catch (e) {
+                    // Cross-origin or other access issues - fallback to localStorage
+                    localStorage.setItem('daa_prefill_sequence', sequence);
+                    showAlert('Live Dashboard opened. Sequence will be pre-filled automatically.', 'info');
+                }
+            }, 1000);
+        } else {
+            // No sequence to prefill
+            setTimeout(() => {
+                showAlert('Live Dashboard opened. It will automatically receive updates from analyses performed here.', 'info');
+            }, 1000);
+        }
+    }
+    
+    // Function to update live dashboard with analysis results
+    function updateLiveDashboard(analysisData) {
+        try {
+            // Store analysis data in localStorage for live dashboard to pick up
+            const dashboardUpdate = {
+                timestamp: Date.now(),
+                sequence_length: analysisData.sequence_length,
+                source: analysisData.source,
+                results: analysisData.results,
+                identity_matches: analysisData.identity_matches || null,
+                analysis_date: new Date().toISOString()
+            };
+            
+            // Store in localStorage with a unique key
+            localStorage.setItem('daa_latest_analysis', JSON.stringify(dashboardUpdate));
+            
+            // Try to notify any open live dashboard windows
+            let dashboardNotified = false;
+            try {
+                // Use BroadcastChannel for cross-tab communication
+                if (typeof BroadcastChannel !== 'undefined') {
+                    const channel = new BroadcastChannel('dna_analysis_updates');
+                    channel.postMessage({
+                        type: 'new_analysis',
+                        data: dashboardUpdate
+                    });
+                    channel.close();
+                    dashboardNotified = true;
+                }
+            } catch (e) {
+                console.log('BroadcastChannel not supported, using localStorage fallback');
+            }
+            
+            // Also try to update any existing dashboard windows via postMessage
+            try {
+                // This will work for same-origin windows
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'analysis_update',
+                        data: dashboardUpdate
+                    }, window.location.origin);
+                    dashboardNotified = true;
+                }
+            } catch (e) {
+                // Ignore cross-origin errors
+            }
+            
+            // Show notification to user
+            showDashboardUpdateNotification(dashboardNotified);
+            
+            console.log('Analysis data sent to live dashboard');
+        } catch (error) {
+            console.error('Failed to update live dashboard:', error);
+        }
+    }
+    
+    function showDashboardUpdateNotification(successful) {
+        const notification = document.getElementById('dashboard-update-notification');
+        if (notification) {
+            const spinner = notification.querySelector('.spinner-border');
+            const message = notification.querySelector('strong');
+            const subMessage = notification.querySelector('small');
+            
+            if (successful) {
+                notification.className = 'alert alert-success mt-3';
+                spinner.style.display = 'none';
+                message.innerHTML = '<i class="fas fa-check-circle me-1"></i>Live Dashboard Updated!';
+                subMessage.textContent = 'Analysis results have been sent to any open Live Dashboard windows.';
+            } else {
+                notification.className = 'alert alert-info mt-3';
+                spinner.style.display = 'inline-block';
+                message.innerHTML = '<i class="fas fa-info-circle me-1"></i>Dashboard Data Stored';
+                subMessage.textContent = 'Results saved for Live Dashboard. Open the dashboard to view updates.';
+            }
+            
+            notification.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                hideDashboardNotification();
+            }, 5000);
+        }
+    }
+    
+    function hideDashboardNotification() {
+        const notification = document.getElementById('dashboard-update-notification');
+        if (notification) {
+            notification.style.display = 'none';
+        }
+    }
+    
+    // Initialize cross-tab communication listener
+    document.addEventListener('DOMContentLoaded', function() {
+        // Listen for messages from live dashboard
+        window.addEventListener('message', function(event) {
+            if (event.origin !== window.location.origin) return;
+            
+            if (event.data.type === 'dashboard_ready') {
+                // Dashboard is ready, send any current analysis data
+                if (currentAnalysisResults) {
+                    updateLiveDashboard(currentAnalysisResults);
+                }
+            }
+        });
+        
+        // Listen for BroadcastChannel messages
+        try {
+            if (typeof BroadcastChannel !== 'undefined') {
+                const channel = new BroadcastChannel('dna_analysis_updates');
+                channel.addEventListener('message', function(event) {
+                    if (event.data.type === 'dashboard_request_data' && currentAnalysisResults) {
+                        updateLiveDashboard(currentAnalysisResults);
+                    }
+                });
+            }
+        } catch (e) {
+            console.log('BroadcastChannel not supported');
+        }
+    });
+</script>
+{% endblock %}

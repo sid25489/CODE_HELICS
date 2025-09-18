@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}DNA Sequence Analyzer - Results{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card glass-card fade-in">
+                <div class="card-header gradient-bg">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-bar me-2 floating"></i>
+                        Analysis Results History
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="search-input" 
+                                       placeholder="Search results...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <select class="form-select" id="filter-select">
+                                <option value="">All Results</option>
+                                <option value="high">High Confidence</option>
+                                <option value="medium">Medium Confidence</option>
+                                <option value="low">Low Confidence</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="results-container">
+                        <!-- Results will be loaded here -->
+                    </div>
+
+                    <div id="no-results" class="text-center py-5" style="display: none;">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Results Found</h5>
+                        <p class="text-muted">No analysis results available yet.</p>
+                        <a href="/analyze" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            Start New Analysis
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Card -->
+    <div class="row mt-4">
+        <div class="col-lg-4">
+            <div class="card glass-card slide-in-left">
+                <div class="card-header gradient-bg">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-pie me-2 floating"></i>
+                        Analysis Statistics
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <span id="total-analyses" class="h4 text-primary pulse-glow">0</span>
+                            </div>
+                            <small class="text-muted">Total Analyses</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <span id="avg-confidence" class="h4 text-success pulse-glow">0%</span>
+                            </div>
+                            <small class="text-muted">Avg Confidence</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <span id="unique-identities" class="h4 text-info pulse-glow">0</span>
+                            </div>
+                            <small class="text-muted">Identities Found</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card glass-card slide-in-right">
+                <div class="card-header gradient-bg">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2 floating"></i>
+                        Understanding Your Results
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <div class="badge bg-success mb-2">High Confidence</div>
+                                <p class="small mb-0">Probability > 70%</p>
+                                <p class="small text-muted">Strong genetic similarity</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <div class="badge bg-warning mb-2">Medium Confidence</div>
+                                <p class="small mb-0">Probability 40-70%</p>
+                                <p class="small text-muted">Moderate similarity</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <div class="badge bg-danger mb-2">Low Confidence</div>
+                                <p class="small mb-0">Probability < 40%</p>
+                                <p class="small text-muted">Limited similarity</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allResults = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadResults();
+        
+        // Set up search and filter
+        document.getElementById('search-input').addEventListener('input', filterResults);
+        document.getElementById('filter-select').addEventListener('change', filterResults);
+    });
+
+    function loadResults() {
+        // Load results from localStorage (in a real app, this would be from the backend)
+        const savedResults = localStorage.getItem('dna-results');
+        
+        if (savedResults) {
+            allResults = JSON.parse(savedResults);
+            displayResults(allResults);
+            updateStatistics();
+        } else {
+            // Show sample results for demonstration
+            generateSampleResults();
+        }
+    }
+
+    function generateSampleResults() {
+        // Generate some sample results for demonstration
+        const sampleResults = [
+            {
+                id: 1,
+                timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+                sequenceLength: 150,
+                results: [
+                    { identity: 'Person_A', probability: 0.85, confidence: 'High' },
+                    { identity: 'Person_B', probability: 0.12, confidence: 'Low' },
+                    { identity: 'Person_C', probability: 0.03, confidence: 'Low' }
+                ]
+            },
+            {
+                id: 2,
+                timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+                sequenceLength: 89,
+                results: [
+                    { identity: 'Person_C', probability: 0.67, confidence: 'Medium' },
+                    { identity: 'Person_A', probability: 0.25, confidence: 'Low' },
+                    { identity: 'Person_D', probability: 0.08, confidence: 'Low' }
+                ]
+            },
+            {
+                id: 3,
+                timestamp: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+                sequenceLength: 234,
+                results: [
+                    { identity: 'Person_B', probability: 0.78, confidence: 'High' },
+                    { identity: 'Person_E', probability: 0.15, confidence: 'Low' },
+                    { identity: 'Person_A', probability: 0.07, confidence: 'Low' }
+                ]
+            }
+        ];
+
+        allResults = sampleResults;
+        localStorage.setItem('dna-results', JSON.stringify(allResults));
+        displayResults(allResults);
+        updateStatistics();
+    }
+
+    function displayResults(results) {
+        const container = document.getElementById('results-container');
+        const noResults = document.getElementById('no-results');
+
+        if (results.length === 0) {
+            container.innerHTML = '';
+            noResults.style.display = 'block';
+            return;
+        }
+
+        noResults.style.display = 'none';
+        
+        let html = '';
+        results.forEach(result => {
+            const date = new Date(result.timestamp).toLocaleString();
+            const topMatch = result.results[0];
+            const percentage = (topMatch.probability * 100).toFixed(1);
+            
+            html += `
+                <div class="card mb-3 result-card" data-confidence="${topMatch.confidence.toLowerCase()}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h6 class="mb-1">Analysis #${result.id}</h6>
+                                <small class="text-muted">${date}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="h5 mb-0">${result.sequenceLength}</div>
+                                    <small class="text-muted">nucleotides</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between">
+                                            <span>${topMatch.identity}</span>
+                                            <span class="fw-bold">${percentage}%</span>
+                                        </div>
+                                        <div class="progress mt-1" style="height: 6px;">
+                                            <div class="progress-bar bg-${getConfidenceColor(topMatch.confidence)}" 
+                                                 style="width: ${percentage}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <span class="badge bg-${getConfidenceColor(topMatch.confidence)}">
+                                    ${topMatch.confidence}
+                                </span>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="viewDetails(${result.id})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            onclick="downloadResult(${result.id})">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function filterResults() {
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+        const confidenceFilter = document.getElementById('filter-select').value;
+
+        let filtered = allResults.filter(result => {
+            const matchesSearch = result.results.some(r => 
+                r.identity.toLowerCase().includes(searchTerm)
+            ) || result.id.toString().includes(searchTerm);
+
+            const matchesFilter = !confidenceFilter || 
+                result.results[0].confidence.toLowerCase() === confidenceFilter;
+
+            return matchesSearch && matchesFilter;
+        });
+
+        displayResults(filtered);
+    }
+
+    function updateStatistics() {
+        const totalAnalyses = allResults.length;
+        const avgConfidence = allResults.length > 0 ? 
+            (allResults.reduce((sum, result) => sum + result.results[0].probability, 0) / totalAnalyses * 100).toFixed(0) : 0;
+        
+        const uniqueIdentities = new Set();
+        allResults.forEach(result => {
+            result.results.forEach(r => uniqueIdentities.add(r.identity));
+        });
+
+        document.getElementById('total-analyses').textContent = totalAnalyses;
+        document.getElementById('avg-confidence').textContent = avgConfidence + '%';
+        document.getElementById('unique-identities').textContent = uniqueIdentities.size;
+    }
+
+    function getConfidenceColor(confidence) {
+        switch(confidence.toLowerCase()) {
+            case 'high': return 'success';
+            case 'medium': return 'warning';
+            case 'low': return 'danger';
+            default: return 'secondary';
+        }
+    }
+
+    function viewDetails(id) {
+        const result = allResults.find(r => r.id === id);
+        if (!result) return;
+
+        let detailsHtml = `
+            <div class="modal fade" id="detailsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Analysis Details #${id}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <strong>Analysis Date:</strong> ${new Date(result.timestamp).toLocaleString()}<br>
+                                <strong>Sequence Length:</strong> ${result.sequenceLength} nucleotides
+                            </div>
+                            <h6>All Identity Matches:</h6>
+        `;
+
+        result.results.forEach(r => {
+            const percentage = (r.probability * 100).toFixed(1);
+            detailsHtml += `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>${r.identity}</span>
+                    <div>
+                        <span class="me-2">${percentage}%</span>
+                        <span class="badge bg-${getConfidenceColor(r.confidence)}">${r.confidence}</span>
+                    </div>
+                </div>
+                <div class="progress mb-3" style="height: 8px;">
+                    <div class="progress-bar bg-${getConfidenceColor(r.confidence)}" 
+                         style="width: ${percentage}%"></div>
+                </div>
+            `;
+        });
+
+        detailsHtml += `
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('detailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        document.body.insertAdjacentHTML('beforeend', detailsHtml);
+        const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+        modal.show();
+    }
+
+    function downloadResult(id) {
+        const result = allResults.find(r => r.id === id);
+        if (!result) return;
+
+        const data = JSON.stringify(result, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `dna-analysis-${id}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showAlert('Result downloaded successfully!', 'success');
+    }
+</script>
+{% endblock %}
