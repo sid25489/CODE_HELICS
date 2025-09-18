@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Live Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Live Dashboard Debug</h1>
+    
+    <div class="test-section">
+        <h3>1. Test Live Dashboard Page Load</h3>
+        <button onclick="testPageLoad()">Test Page Load</button>
+        <div id="pageLoadResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Test Streaming Endpoint</h3>
+        <button onclick="testStreaming()">Test Streaming</button>
+        <div id="streamingResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Test Identity Matching</h3>
+        <button onclick="testIdentityMatching()">Test Identity Matching</button>
+        <div id="identityResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Direct Link Tests</h3>
+        <p><a href="http://localhost:5000/" target="_blank">Open Live Dashboard (Home)</a></p>
+        <p><a href="http://localhost:5000/live-dashboard" target="_blank">Open Live Dashboard (legacy path)</a></p>
+    </div>
+
+    <script>
+        async function testPageLoad() {
+            const result = document.getElementById('pageLoadResult');
+            result.innerHTML = '<div class="info">Testing page load...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:5000/live-dashboard');
+                const text = await response.text();
+                
+                if (response.ok) {
+                    const checks = [
+                        { name: 'Base template', test: text.includes('Live Analysis Dashboard') },
+                        { name: 'Progress ring', test: text.includes('progress-ring') },
+                        { name: 'JavaScript', test: text.includes('LiveDashboard') },
+                        { name: 'Start button', test: text.includes('startAnalysis') }
+                    ];
+                    
+                    let html = '<div class="success">✅ Page loaded successfully</div>';
+                    checks.forEach(check => {
+                        const status = check.test ? '✅' : '❌';
+                        html += `<div>${status} ${check.name}: ${check.test ? 'Found' : 'Missing'}</div>`;
+                    });
+                    
+                    result.innerHTML = html;
+                } else {
+                    result.innerHTML = `<div class="error">❌ Failed to load: ${response.status}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testStreaming() {
+            const result = document.getElementById('streamingResult');
+            result.innerHTML = '<div class="info">Testing streaming...</div>';
+            
+            try {
+                const testSequence = 'ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGT';
+                const response = await fetch(`http://localhost:5000/api/analyze-dna-stream?sequence=${testSequence}`);
+                
+                if (response.ok) {
+                    result.innerHTML = '<div class="success">✅ Streaming endpoint accessible</div>';
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let count = 0;
+                    
+                    while (count < 3) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.trim()) {
+                                try {
+                                    const data = JSON.parse(line);
+                                    result.innerHTML += `<div class="success">✅ Event: ${data.event}</div>`;
+                                    count++;
+                                } catch (e) {
+                                    result.innerHTML += `<div class="info">📄 Data: ${line.substring(0, 50)}...</div>`;
+                                    count++;
+                                }
+                                if (count >= 3) break;
+                            }
+                        }
+                    }
+                    
+                    reader.cancel();
+                } else {
+                    result.innerHTML = `<div class="error">❌ Streaming failed: ${response.status}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testIdentityMatching() {
+            const result = document.getElementById('identityResult');
+            result.innerHTML = '<div class="info">Testing identity matching...</div>';
+            
+            try {
+                const testSequence = 'ATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGTAACGGTGCGGGCTGACGCGTACAGGAAACACAGAAAAAAGCCCGCACCTGACAGTGCGGGCTTTTTTTTTCGACCAAAGGTAACGAGGTAACAACCATGCGAGTGTTGAAGTTCGGCGGTACATCAGTGGCAAATGCAGAACGTTTTCTGCGTGTTGCCGATATTCTGGAAAGCAATGCCAGGCAGGGGCAGGTGGCCACCGTCCTCTCTGCCCCCGCCAAAATCACCAACCACCTGGTGGCGATGATTGAAAAAACCATTAGCGGCCAGGATGCTTTACCCAATATCAGCGATGCCGAACGTATTTTTGCCGAACTTTTGACGGGACTCGCCGCCGCCCAGCCGGGGTTCCCGCTGGCGCAATTGAAAACTTTCGTCGATCAGGAATTTGCCCAA';
+                
+                const response = await fetch('http://localhost:5000/api/identify-person', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sequence: testSequence, top_matches: 3 })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    result.innerHTML = `<div class="success">✅ Identity matching works</div>`;
+                    result.innerHTML += `<div class="info">Found ${data.matches.length} matches</div>`;
+                    
+                    data.matches.forEach((match, i) => {
+                        const similarity = (match.similarity_score * 100).toFixed(1);
+                        result.innerHTML += `<div class="info">${i+1}. ${match.person_name} (${similarity}% - ${match.confidence})</div>`;
+                    });
+                } else {
+                    result.innerHTML = `<div class="error">❌ Identity matching failed: ${data.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
